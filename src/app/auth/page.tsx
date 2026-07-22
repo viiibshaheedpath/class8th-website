@@ -28,6 +28,9 @@ export default function AuthPage() {
   const [showSuConfirm, setShowSuConfirm] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // Concise Terms & Conditions Modal
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+
   // Inline Forgot Password
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -44,6 +47,17 @@ export default function AuthPage() {
   // Mascot References for Cursor Eye Tracking
   const mascotsRef = useRef<HTMLDivElement>(null);
 
+  // Helper: Password validation rules (6+ chars AND at least 1 special symbol)
+  const validatePasswordRules = (pw: string) => {
+    const hasMinLen = pw.length >= 6;
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pw);
+    return {
+      hasMinLen,
+      hasSymbol,
+      isValid: hasMinLen && hasSymbol
+    };
+  };
+
   // Auto-redirect ONLY if an active user or admin session exists in localStorage
   useEffect(() => {
     if (!authLoading && user) {
@@ -56,17 +70,34 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
-  // Load theme and remembered email from localStorage
+  // Load theme and REMEMBERED CREDENTIALS FOR 30 DAYS from localStorage
   useEffect(() => {
     try {
       const storedTheme = localStorage.getItem('c8-theme') as 'dark' | 'light';
       if (storedTheme === 'light' || storedTheme === 'dark') {
         setTheme(storedTheme);
       }
+
+      // Check 30-day Remember Me state
+      const remExp = localStorage.getItem('c8-remember-exp');
       const remEmail = localStorage.getItem('c8-remember-email');
-      if (remEmail) {
-        setLoginEmail(remEmail);
-        setRememberMe(true);
+      const remPass = localStorage.getItem('c8-remember-password');
+
+      if (remEmail && remExp) {
+        const now = Date.now();
+        const expTime = Number(remExp);
+
+        if (now < expTime) {
+          // Credentials still valid within 30 days!
+          setLoginEmail(remEmail);
+          if (remPass) setLoginPassword(remPass);
+          setRememberMe(true);
+        } else {
+          // 30 days expired -> clear saved credentials
+          localStorage.removeItem('c8-remember-email');
+          localStorage.removeItem('c8-remember-password');
+          localStorage.removeItem('c8-remember-exp');
+        }
       }
     } catch (e) {}
   }, []);
@@ -196,11 +227,19 @@ export default function AuthPage() {
     const email = loginEmail.trim();
     const pass = loginPassword;
     const okE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const okP = pass.length >= 6;
+    const pRules = validatePasswordRules(pass);
 
-    setErrors({ loginEmail: !okE, loginPassword: !okP });
-    if (!okE || !okP) {
-      setBanner({ type: 'err', msg: 'Please fix the highlighted fields.' });
+    setErrors({ loginEmail: !okE, loginPassword: !pRules.isValid });
+
+    if (!okE) {
+      setBanner({ type: 'err', msg: 'Please enter a valid email address.' });
+      return;
+    }
+    if (!pRules.isValid) {
+      setBanner({
+        type: 'err',
+        msg: 'Password must be at least 6 characters long and contain at least 1 special symbol (e.g. @, #, $, !).'
+      });
       return;
     }
 
@@ -210,11 +249,19 @@ export default function AuthPage() {
       if (error) {
         setBanner({ type: 'err', msg: error.message || 'Invalid email or password.' });
       } else {
+        // Save/Clear 30-day Remember Me
         if (rememberMe) {
+          const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+          const expiryTime = Date.now() + thirtyDaysInMs;
           localStorage.setItem('c8-remember-email', email);
+          localStorage.setItem('c8-remember-password', pass);
+          localStorage.setItem('c8-remember-exp', String(expiryTime));
         } else {
           localStorage.removeItem('c8-remember-email');
+          localStorage.removeItem('c8-remember-password');
+          localStorage.removeItem('c8-remember-exp');
         }
+
         setBanner({ type: 'ok', msg: 'Welcome back! Taking you to your dashboard…' });
         setTimeout(() => router.push('/dashboard'), 600);
       }
@@ -236,17 +283,28 @@ export default function AuthPage() {
 
     const okN = name.length > 0;
     const okE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const okP = pass.length >= 6;
+    const pRules = validatePasswordRules(pass);
     const okC = conf.length > 0 && conf === pass;
 
-    setErrors({ suName: !okN, suEmail: !okE, suPassword: !okP, suConfirm: !okC });
+    setErrors({ suName: !okN, suEmail: !okE, suPassword: !pRules.isValid, suConfirm: !okC });
 
     if (!agreeTerms) {
       setBanner({ type: 'err', msg: 'Please accept the Terms & Privacy to continue.' });
       return;
     }
-    if (!okN || !okE || !okP || !okC) {
-      setBanner({ type: 'err', msg: 'Please fix the highlighted fields.' });
+    if (!okN || !okE) {
+      setBanner({ type: 'err', msg: 'Please fill in all required fields correctly.' });
+      return;
+    }
+    if (!pRules.isValid) {
+      setBanner({
+        type: 'err',
+        msg: 'Password must be at least 6 characters long and contain at least 1 special symbol (e.g. @, #, $, !).'
+      });
+      return;
+    }
+    if (!okC) {
+      setBanner({ type: 'err', msg: 'Passwords do not match.' });
       return;
     }
 
@@ -657,9 +715,16 @@ export default function AuthPage() {
                       )}
                     </button>
                   </div>
-                  {errors.loginPassword && (
-                    <div className="err-msg">Password must be at least 6 characters.</div>
-                  )}
+
+                  {/* Password requirement rule indicators */}
+                  <div style={{ marginTop: '7px', fontSize: '11.5px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <span style={{ color: loginPassword.length >= 6 ? '#34d399' : errors.loginPassword ? '#f87171' : 'var(--muted)', transition: 'color 0.2s' }}>
+                      {loginPassword.length >= 6 ? '✓' : '•'} Minimum 6 characters long
+                    </span>
+                    <span style={{ color: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(loginPassword) ? '#34d399' : errors.loginPassword ? '#f87171' : 'var(--muted)', transition: 'color 0.2s' }}>
+                      {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(loginPassword) ? '✓' : '•'} At least 1 special symbol (e.g. @, #, $, !)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="row">
@@ -674,7 +739,7 @@ export default function AuthPage() {
                         <path d="M5 12l4 4 10-10" />
                       </svg>
                     </span>
-                    Remember for 30 days
+                    Remember password for 30 days
                   </label>
                   <button
                     type="button"
@@ -722,6 +787,17 @@ export default function AuthPage() {
                     <span>Log in</span>
                   )}
                 </button>
+
+                <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--muted)' }}>
+                  By logging in, you agree to our{' '}
+                  <button
+                    type="button"
+                    onClick={() => setTermsModalOpen(true)}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--link)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Terms &amp; Conditions
+                  </button>
+                </div>
 
                 <p className="switch">
                   Don't have an account?{' '}
@@ -821,9 +897,16 @@ export default function AuthPage() {
                       )}
                     </button>
                   </div>
-                  {errors.suPassword && (
-                    <div className="err-msg">Password must be at least 6 characters.</div>
-                  )}
+
+                  {/* Password requirement rule indicators */}
+                  <div style={{ marginTop: '7px', fontSize: '11.5px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <span style={{ color: suPassword.length >= 6 ? '#34d399' : errors.suPassword ? '#f87171' : 'var(--muted)', transition: 'color 0.2s' }}>
+                      {suPassword.length >= 6 ? '✓' : '•'} Minimum 6 characters long
+                    </span>
+                    <span style={{ color: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(suPassword) ? '#34d399' : errors.suPassword ? '#f87171' : 'var(--muted)', transition: 'color 0.2s' }}>
+                      {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(suPassword) ? '✓' : '•'} At least 1 special symbol (e.g. @, #, $, !)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="field">
@@ -880,8 +963,16 @@ export default function AuthPage() {
                         <path d="M5 12l4 4 10-10" />
                       </svg>
                     </span>
-                    I agree to the Terms &amp; Privacy
+                    I agree to the{' '}
                   </label>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => setTermsModalOpen(true)}
+                    style={{ fontSize: '14px', marginLeft: '-6px' }}
+                  >
+                    Terms &amp; Conditions
+                  </button>
                 </div>
 
                 <button type="submit" className="submit" disabled={isSubmitting || authLoading}>
@@ -913,6 +1004,108 @@ export default function AuthPage() {
           </div>
         </section>
       </main>
+
+      {/* CONCISE TERMS & CONDITIONS MODAL */}
+      {termsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 70,
+            background: 'rgba(5, 5, 12, 0.82)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              background: 'var(--right)',
+              border: '1px solid var(--field-bd)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              color: 'var(--text)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>
+                📜 Terms &amp; Conditions
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTermsModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p style={{ margin: 0 }}>
+                Welcome to <b>Class 8 Hub</b>. Please review our concise terms of service:
+              </p>
+
+              <div style={{ background: 'var(--field)', padding: '10px 12px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '16px' }}>🎓</span>
+                <div>
+                  <b style={{ color: 'var(--text)' }}>Academic Purpose:</b> Class 8 Hub is built for personal study tracking, revision, and student skill growth.
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--field)', padding: '10px 12px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '16px' }}>🛡️</span>
+                <div>
+                  <b style={{ color: 'var(--text)' }}>Account Security:</b> Keep your credentials secure. You are responsible for all activities performed under your profile.
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--field)', padding: '10px 12px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '16px' }}>🔒</span>
+                <div>
+                  <b style={{ color: 'var(--text)' }}>Privacy &amp; Data:</b> Your study logs and quiz records are kept strictly private for your account. We never sell student data.
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--field)', padding: '10px 12px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '16px' }}>⚖️</span>
+                <div>
+                  <b style={{ color: 'var(--text)' }}>Platform Conduct:</b> Respectful behavior is required. Automated spamming or platform manipulation is prohibited.
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAgreeTerms(true);
+                setTermsModalOpen(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '10px',
+                background: 'var(--btn)',
+                color: 'var(--btn-tx)',
+                fontWeight: 700,
+                fontSize: '14px',
+                border: 0,
+                cursor: 'pointer',
+                marginTop: '6px'
+              }}
+            >
+              I Accept &amp; Agree
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
