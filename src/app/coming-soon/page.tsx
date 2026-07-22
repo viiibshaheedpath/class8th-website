@@ -1,57 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
-
-const UPCOMING_FEATURES = [
-  {
-    icon: '🤖',
-    title: 'AI Personal Study Assistant',
-    badge: 'In Development',
-    category: 'AI & Machine Learning',
-    description: '24/7 intelligent tutor offering instant step-by-step math solutions, concept breakdowns, and personalized study schedules.'
-  },
-  {
-    icon: '🎮',
-    title: 'Live Multiplayer Quiz Arena',
-    badge: 'Q3 2026',
-    category: 'Gamification',
-    description: 'Challenge classmates in real-time speed quizzes, climb school leaderboards, and win seasonal trophy badges.'
-  },
-  {
-    icon: '🔬',
-    title: '3D Virtual Science Lab',
-    badge: 'Beta Coming Soon',
-    category: 'Interactive Physics & Chemistry',
-    description: 'Perform virtual chemical reactions, circuit building, and optics experiments directly in your browser with full 3D interaction.'
-  },
-  {
-    icon: '🎙️',
-    title: 'Voice Notes & Smart Summarizer',
-    badge: 'Planned',
-    category: 'Productivity',
-    description: 'Record audio study notes and automatically convert them into structured bullet-point summaries and revision flashcards.'
-  },
-  {
-    icon: '🏆',
-    title: 'Gamified Scholar Guilds',
-    badge: 'Planned',
-    category: 'Social Learning',
-    description: 'Form study groups with friends, tackle collective weekly learning quests, and unlock custom avatar themes together.'
-  },
-  {
-    icon: '📊',
-    title: 'Smart Predictive Analytics',
-    badge: 'Research Phase',
-    category: 'AI Analytics',
-    description: 'Advanced diagnostic algorithms that detect your weak topics before exams and recommend targeted practice questions.'
-  }
-];
 
 export default function ComingSoonPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [notifyEmail, setNotifyEmail] = useState('');
-  const [notified, setNotified] = useState(false);
 
   // HEX FIELD ANIMATION (Exact canvas animation logic from animation.html)
   useEffect(() => {
@@ -301,15 +254,8 @@ export default function ComingSoonPage() {
     };
   }, []);
 
-  const handleNotify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!notifyEmail.trim()) return;
-    setNotified(true);
-    setNotifyEmail('');
-  };
-
   return (
-    <DashboardLayout title="Coming Soon Features">
+    <DashboardLayout title="Coming Soon">
       <div
         style={{
           position: 'relative',
@@ -317,12 +263,15 @@ export default function ComingSoonPage() {
           overflow: 'hidden',
           minHeight: '85vh',
           background: '#000000',
-          padding: '32px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 24px',
           color: '#ffffff'
         }}
       >
         {/* ========================================================== */}
-        {/* HEX DATA FIELD ANIMATION CANVAS (RUNS IN BACKGROUND)       */}
+        {/* HEX DATA FIELD ANIMATION CANVAS (EXACT ANIMATION FROM HTML)*/}
         {/* ========================================================== */}
         <canvas
           ref={canvasRef}
@@ -338,223 +287,72 @@ export default function ComingSoonPage() {
           aria-hidden="true"
         />
 
-        {/* OVERLAY TINT FOR CONTENT READABILITY */}
+        {/* VIGNETTE OVERLAY */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             background:
-              'radial-gradient(100% 80% at 50% 30%, rgba(0,0,0,0.4), rgba(0,0,0,0.85)), linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%)',
+              'radial-gradient(80% 80% at 50% 50%, rgba(0,0,0,0.1), rgba(0,0,0,0.85))',
             zIndex: 1,
             pointerEvents: 'none'
           }}
         />
 
-        {/* UI OVERLAY CONTENT (SITS ABOVE CANVAS ANIMATION) */}
+        {/* ONLY CONTENT: ANIMATED ITALICS QUOTE OVERLAY */}
         <div
           style={{
             position: 'relative',
             zIndex: 10,
-            maxWidth: '1080px',
-            margin: '0 auto'
+            maxWidth: '820px',
+            textAlign: 'center',
+            padding: '20px'
           }}
         >
-          {/* HEADER HERO */}
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 16px',
-                borderRadius: '999px',
-                background: 'rgba(168, 85, 247, 0.14)',
-                border: '1px solid rgba(168, 85, 247, 0.35)',
-                color: '#e9d5ff',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                marginBottom: '16px'
-              }}
-            >
-              <span>✨</span> Next-Gen Innovations
-            </div>
-
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 'clamp(28px, 4vw, 46px)',
-                fontWeight: 800,
-                letterSpacing: '-1px',
-                background: 'linear-gradient(135deg, #ffffff 30%, #a855f7 70%, #ec4899 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
-            >
-              Coming Soon Features
-            </h1>
-
-            <p
-              style={{
-                maxWidth: '640px',
-                margin: '12px auto 0',
-                color: '#b6b2cc',
-                fontSize: '15px',
-                lineHeight: 1.6
-              }}
-            >
-              We are actively developing powerful AI tools, interactive 3D science labs, and real-time multiplayer features to elevate your learning experience to the next level.
-            </p>
-          </div>
-
-          {/* UPCOMING FEATURES CARDS GRID */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '20px',
-              marginBottom: '48px'
-            }}
-          >
-            {UPCOMING_FEATURES.map((feat) => (
-              <div
-                key={feat.title}
-                style={{
-                  position: 'relative',
-                  background: 'linear-gradient(160deg, rgba(26,22,38,0.72), rgba(36,30,52,0.65))',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  borderRadius: '20px',
-                  padding: '22px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  boxShadow: '0 16px 40px -20px rgba(0,0,0,0.9)',
-                  transition: 'transform 0.25s ease, border-color 0.25s ease'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '32px' }}>{feat.icon}</span>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      background: 'rgba(168, 85, 247, 0.18)',
-                      color: '#a855f7',
-                      border: '1px solid rgba(168, 85, 247, 0.3)'
-                    }}
-                  >
-                    {feat.badge}
-                  </span>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '11px', color: '#857fa0', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-                    {feat.category}
-                  </span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>
-                    {feat.title}
-                  </h3>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '13px', color: '#b6b2cc', lineHeight: 1.55 }}>
-                  {feat.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* EARLY ACCESS / NOTIFY ME CARD */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(99,102,241,0.18))',
-              border: '1px solid rgba(168,85,247,0.35)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: '24px',
-              padding: '32px 24px',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            <span style={{ fontSize: '36px' }}>🚀</span>
-            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-              Want Early Access to New Features?
-            </h2>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#b6b2cc', maxWidth: '520px', lineHeight: 1.5 }}>
-              Enter your email to get notified the minute new AI tools, 3D science labs, and multiplayer quizzes are launched.
-            </p>
-
-            {notified ? (
-              <div
-                style={{
-                  background: 'rgba(52, 211, 153, 0.15)',
-                  border: '1px solid #34d399',
-                  color: '#34d399',
-                  padding: '12px 24px',
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  fontSize: '14px'
-                }}
-              >
-                🎉 Thank you! You're on the early access VIP list.
-              </div>
-            ) : (
-              <form
-                onSubmit={handleNotify}
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  maxWidth: '460px',
-                  width: '100%',
-                  flexWrap: 'wrap'
-                }}
-              >
-                <input
-                  type="email"
-                  placeholder="Enter your student email..."
-                  value={notifyEmail}
-                  onChange={(e) => setNotifyEmail(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: '220px',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    color: '#ffffff',
-                    fontSize: '13.5px',
-                    outline: 'none'
-                  }}
-                  required
-                />
-                <button
-                  type="submit"
-                  style={{
-                    padding: '12px 22px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #a855f7, #6366f1)',
-                    border: 'none',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '13.5px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 16px rgba(168,85,247,0.4)',
-                    transition: 'transform 0.15s ease'
-                  }}
-                >
-                  Notify Me ⚡
-                </button>
-              </form>
-            )}
-          </div>
+          <blockquote className="mystical-quote">
+            “The masons work in silence beyond the veil; soon, the corridors will stretch into uncharted wings, the tapestries will part to reveal hidden instruments, and the very foundations will hum with a swifter, quieter magic.”
+          </blockquote>
         </div>
+
+        <style jsx global>{`
+          .mystical-quote {
+            margin: 0;
+            font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+            font-style: italic;
+            font-size: clamp(20px, 3.2vw, 34px);
+            font-weight: 400;
+            line-height: 1.6;
+            letter-spacing: 0.2px;
+            background: linear-gradient(135deg, #ffffff 10%, #e9d5ff 50%, #c084fc 90%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 35px rgba(168, 85, 247, 0.45);
+            animation: mysticalFadeCycle 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          }
+
+          @keyframes mysticalFadeCycle {
+            0% {
+              opacity: 0;
+              transform: translateY(14px) scale(0.98);
+              filter: blur(10px);
+            }
+            18% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+              filter: blur(0px);
+            }
+            78% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+              filter: blur(0px);
+            }
+            92%, 100% {
+              opacity: 0;
+              transform: translateY(-10px) scale(0.99);
+              filter: blur(8px);
+            }
+          }
+        `}</style>
       </div>
     </DashboardLayout>
   );
