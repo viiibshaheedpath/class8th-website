@@ -1,0 +1,3817 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Internal Reflection Virtual Lab</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       THEME VARIABLES
+       ============================================================ */
+    :root {
+      --bg: #090f1d;
+      --panel: rgba(17, 24, 39, 0.75);
+      --panel-2: rgba(31, 41, 55, 0.6);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --ink: #f3f4f6;
+      --ink-soft: #9ca3af;
+      --line: rgba(255, 255, 255, 0.08);
+      --brand: #3b82f6;
+      --brand-2: #8b5cf6;
+      --brand-glow: rgba(59, 130, 246, 0.35);
+      --accent: #ec4899;
+      --good: #10b981;
+      --good-glow: rgba(16, 185, 129, 0.15);
+      --warn: #f59e0b;
+      --warn-glow: rgba(245, 158, 11, 0.15);
+      --radius: 16px;
+      --shadow: 0 4px 30px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
+      --glass-blur: blur(14px);
+      --canvas-bg: #0a0f1d;
+      --canvas-grid: rgba(255, 255, 255, 0.03);
+    }
+
+    [data-theme="light"] {
+      --bg: #f1f5f9;
+      --panel: rgba(255, 255, 255, 0.8);
+      --panel-2: rgba(241, 245, 249, 0.9);
+      --panel-border: rgba(0, 0, 0, 0.08);
+      --ink: #0f172a;
+      --ink-soft: #475569;
+      --line: rgba(0, 0, 0, 0.06);
+      --brand: #2563eb;
+      --brand-2: #7c3aed;
+      --brand-glow: rgba(37, 99, 235, 0.15);
+      --accent: #db2777;
+      --good: #059669;
+      --good-glow: rgba(5, 150, 105, 0.1);
+      --warn: #d97706;
+      --warn-glow: rgba(217, 119, 6, 0.1);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+      --canvas-bg: #ffffff;
+      --canvas-grid: rgba(0, 0, 0, 0.03);
+    }
+
+    /* ============================================================
+       BASE STYLES
+       ============================================================ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .app {
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    /* ============================================================
+       HEADER TOOLBAR
+       ============================================================ */
+    header.toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2), var(--accent), var(--brand));
+      background-size: 300% 300%;
+      animation: gradientShift 15s ease infinite;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      color: #ffffff;
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    .title-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header.toolbar h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #ffffff, #dbeafe, #ffffff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 4s linear infinite;
+    }
+
+    @keyframes shine {
+      to {
+        background-position: 200% center;
+      }
+    }
+
+    header.toolbar .sub {
+      font-size: 13px;
+      opacity: 0.9;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      flex-wrap: wrap;
+    }
+
+    .mode-tabs button {
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13.5px;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .mode-tabs button:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-tabs button.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    /* In-panel action button (uses theme color, lives inside light/dark panel) */
+    .btn-action {
+      width: 100%;
+      border: 1px solid var(--brand);
+      background: var(--brand-glow);
+      color: var(--brand);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-action:hover {
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .btn-action:active {
+      transform: scale(0.98);
+    }
+
+    /* ============================================================
+       MAIN LAYOUT
+       ============================================================ */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(360px, 1fr);
+      gap: 16px;
+      flex: 1;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       LEFT COLUMN: STAGE (Simulation)
+       ============================================================ */
+    .stage {
+      background: var(--panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .stage-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .pill {
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+    }
+
+    .pill.ok {
+      background: var(--good-glow);
+      color: var(--good);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .pill.warn {
+      background: var(--warn-glow);
+      color: var(--warn);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .canvas-container {
+      position: relative;
+      background: var(--canvas-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      aspect-ratio: 5 / 3;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .canvas-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .drag-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #e5e7eb;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: opacity 0.3s;
+    }
+
+    .explanation-box {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .explanation-box h3 {
+      font-size: 14.5px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--brand);
+    }
+
+    .explanation-box p {
+      font-size: 13px;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       RIGHT COLUMN: CONTROL PANEL & READOUTS
+       ============================================================ */
+    .panel {
+      background: var(--panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      max-height: calc(100vh - 32px);
+    }
+
+    /* Readouts Grid */
+    .readouts {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .card.accent {
+      border-color: var(--brand);
+    }
+
+    .card .k {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+    }
+
+    .card .v {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--ink);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card.accent .v {
+      color: var(--brand);
+    }
+
+    /* Tab Contents styling */
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tab-content.active {
+      display: flex;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tab-content h3 {
+      font-size: 16px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+      margin-bottom: 4px;
+    }
+
+    /* Control Inputs */
+    .ctrl {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ctrl .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .ctrl label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .ctrl .val {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--brand);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .ctrl input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: var(--line);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      accent-color: var(--brand);
+      cursor: pointer;
+    }
+
+    .ctrl input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+    }
+
+    /* Material selector dropdowns */
+    .ctrl select {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .ctrl select:focus {
+      border-color: var(--brand);
+    }
+
+    /* Number inputs (Numerical Solver) */
+    .ctrl input[type="number"] {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--ink);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .ctrl input[type="number"]:focus {
+      border-color: var(--brand);
+    }
+
+    .seg {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .ctrl .seg {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .ctrl .seg button {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--ink-soft);
+      border-radius: 8px;
+      padding: 8px 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .ctrl .seg button:hover {
+      background: var(--line);
+      color: var(--ink);
+    }
+
+    .ctrl .seg button.active {
+      background: var(--brand);
+      color: #ffffff;
+      border-color: var(--brand);
+    }
+
+    /* Geometry presets toggle specific */
+    #seg-prism-type,
+    #seg-mirage-type,
+    #seg-bow-type {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    #seg-prism-type button,
+    #seg-mirage-type button,
+    #seg-bow-type button {
+      padding: 10px;
+      font-size: 12.5px;
+    }
+
+    /* Plot Canvas area */
+    .plot-container {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .plot-container h4 {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .plot-container canvas {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 8px;
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ============================================================
+       FORMULA BOX
+       ============================================================ */
+    .formula-box {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      color: var(--ink-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .formula-box .title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 12.5px;
+      color: var(--brand);
+      margin-bottom: 4px;
+    }
+
+    .formula-box .eq {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--line);
+      margin-bottom: 4px;
+    }
+
+    /* Step-by-step panel (educational) */
+    .steps-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--brand);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.55;
+    }
+
+    .step .head {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 11.5px;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+
+    .step b {
+      color: var(--ink);
+    }
+
+    .step.conclude-ok {
+      border-left-color: var(--good);
+    }
+
+    .step.conclude-ok .head {
+      color: var(--good);
+    }
+
+    .step.conclude-warn {
+      border-left-color: var(--warn);
+    }
+
+    .step.conclude-warn .head {
+      color: var(--warn);
+    }
+
+    /* Concept introduction block (top of each control section) */
+    .intro {
+      background: linear-gradient(135deg, var(--brand-glow), rgba(139, 92, 246, 0.10));
+      border: 1px solid var(--brand);
+      border-left-width: 4px;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    .intro .intro-title {
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .intro b { color: var(--brand); }
+    .intro code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: rgba(0, 0, 0, 0.18);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* Per-control helper info text */
+    .ctrl .info {
+      font-size: 11px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+      margin-top: 2px;
+      padding-left: 2px;
+      border-left: 2px solid var(--line);
+      padding-left: 8px;
+    }
+
+    /* Footers */
+    footer.credit {
+      text-align: center;
+      font-size: 12px;
+      color: var(--ink-soft);
+      padding: 8px;
+      margin-top: auto;
+      border-top: 1px solid var(--line);
+    }
+
+    footer.credit a {
+      color: var(--brand);
+      text-decoration: none;
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+    <!-- TOOLBAR -->
+    <header class="toolbar">
+      <div class="title-area">
+        <h1>Total Internal Reflection Simulation</h1>
+        <div class="sub">By Priyesh</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="mode-tabs">
+        <button id="tab-sandbox" class="active" onclick="TIR.switchMode('sandbox')">Sandbox</button>
+        <button id="tab-fiber" onclick="TIR.switchMode('fiber')">Optical Fiber</button>
+        <button id="tab-prism" onclick="TIR.switchMode('prism')">Triangular Prism</button>
+        <button id="tab-mirage" onclick="TIR.switchMode('mirage')">Atmospheric Mirage</button>
+        <button id="tab-rainbow" onclick="TIR.switchMode('rainbow')">Rainbow (TIR)</button>
+        <button id="tab-lens" onclick="TIR.switchMode('lens')">Lens Formula</button>
+        <button id="tab-solver" onclick="TIR.switchMode('solver')">Numerical Solver</button>
+      </div>
+      <button class="btn" id="btn-theme" onclick="TIR.toggleTheme()" aria-label="Toggle Theme">
+        <span>🌓 Theme</span>
+      </button>
+    </header>
+
+    <!-- MAIN LAYOUT -->
+    <div class="layout">
+      <!-- STAGE CONTAINER -->
+      <section class="stage">
+        <div class="stage-header">
+          <h2 id="stage-title">TIR Sandbox</h2>
+          <div id="status-badge" class="pill ok">Refracting</div>
+        </div>
+
+        <div class="canvas-container" id="canvas-container">
+          <canvas id="main-canvas" width="800" height="480"></canvas>
+          <div id="drag-hint" class="drag-hint">Drag inside the canvas to rotate the laser!</div>
+        </div>
+
+        <div class="explanation-box">
+          <h3 id="exp-title">Sandbox Physical Behavior</h3>
+          <p id="exp-text">Light travels from a denser medium (higher refractive index) to a rarer medium. When the
+            angle of incidence exceeds the critical angle, the light is entirely reflected back.</p>
+        </div>
+      </section>
+
+      <!-- CONTROL PANEL -->
+      <aside class="panel">
+        <!-- READOUTS -->
+        <div class="readouts">
+          <div class="card accent">
+            <div class="k" id="lbl-c-angle">Critical Angle (θc)</div>
+            <div class="v" id="val-c-angle">41.81°</div>
+          </div>
+          <div class="card">
+            <div class="k" id="lbl-angle-1">Incident Angle (θi)</div>
+            <div class="v" id="val-angle-1">30.00°</div>
+          </div>
+          <div class="card">
+            <div class="k" id="lbl-card-refl">Reflection (R)</div>
+            <div class="v" id="val-refl">4.25%</div>
+          </div>
+          <div class="card">
+            <div class="k" id="lbl-card-refr">Refraction (T)</div>
+            <div class="v" id="val-refr">95.75%</div>
+          </div>
+        </div>
+
+        <!-- FORMULA REALTIME READOUT -->
+        <div class="formula-box" id="formula-display">
+          <div class="title" id="formula-title">Snell's Law Calculation</div>
+          <div class="eq" id="formula-eq">1.50 × sin(30.0°) = 1.00 × sin(θt)</div>
+          <div id="formula-explanation">Solving gives refracted angle θt = 48.59°. Because θi &lt; θc, refraction
+            occurs.</div>
+        </div>
+
+        <!-- STEP-BY-STEP EXPLANATION PANEL -->
+        <div class="steps-panel" id="steps-panel">
+          <div class="step" id="step-1"><div class="head">Step 1 · Given</div><span id="step-1-body"></span></div>
+          <div class="step" id="step-2"><div class="head">Step 2 · Critical angle θc</div><span id="step-2-body"></span></div>
+          <div class="step" id="step-3"><div class="head">Step 3 · Compare θi vs θc</div><span id="step-3-body"></span></div>
+          <div class="step conclude-ok" id="step-4"><div class="head">Step 4 · Conclusion</div><span id="step-4-body"></span></div>
+        </div>
+
+        <!-- SANDBOX CONTROLS -->
+        <div id="ctrl-sandbox" class="tab-content active">
+          <h3>Sandbox Controls</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 What is Total Internal Reflection?</span>
+            When light travels from a <b>denser</b> medium (higher index n₁) to a <b>rarer</b> one (lower n₂), it
+            bends <i>away</i> from the normal. Past a certain <b>critical angle</b>
+            <code>θc = sin⁻¹(n₂/n₁)</code> the refracted ray would need to bend more than 90° — impossible — so
+            <b>100% of the light reflects back</b>. That is Total Internal Reflection (TIR). Below θc, light splits
+            into a reflected part (R) and a refracted part (T) given by the Fresnel equations.
+          </div>
+
+          <div class="ctrl">
+            <label>Denser Medium (lower, n₁)</label>
+            <select id="sel-s-n1" onchange="TIR.onMaterialChange('s-n1')"></select>
+            <div class="info">Pick a real substance. Its index then follows Cauchy's dispersion law, so changing λ shifts θc.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-s-n1">Index n₁ (with dispersion)</label>
+              <span class="val" id="val-s-n1">1.50</span>
+            </div>
+            <input type="range" id="slide-s-n1" min="1.01" max="2.50" step="0.01" value="1.50"
+              oninput="TIR.onParamChange()">
+            <div class="info">Fine-tune the refractive index of the lower (denser) medium. Higher n₁ → smaller θc.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Rarer Medium (upper, n₂)</label>
+            <select id="sel-s-n2" onchange="TIR.onMaterialChange('s-n2')"></select>
+            <div class="info">Pick the upper (rarer) medium. TIR is only possible when n₁ &gt; n₂.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-s-n2">Index n₂ (with dispersion)</label>
+              <span class="val" id="val-s-n2">1.00</span>
+            </div>
+            <input type="range" id="slide-s-n2" min="1.00" max="2.40" step="0.01" value="1.00"
+              oninput="TIR.onParamChange()">
+            <div class="info">Fine-tune the index of the upper (rarer) medium.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Quick Presets</label>
+            <div class="seg">
+              <button onclick="TIR.applyPreset('glass','air')">Glass→Air</button>
+              <button onclick="TIR.applyPreset('water','air')">Water→Air</button>
+              <button onclick="TIR.applyPreset('diamond','air')">Diamond→Air</button>
+              <button onclick="TIR.applyPreset('glass','water')">Glass→Water</button>
+            </div>
+            <div class="info">Common textbook medium pairs — sets both materials at once.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-s-theta">Angle of Incidence (θi)</label>
+              <span class="val" id="val-s-theta">30.0°</span>
+            </div>
+            <input type="range" id="slide-s-theta" min="0" max="89" step="0.1" value="30.0" oninput="TIR.onParamChange()">
+            <div class="info">Angle between the incoming ray and the normal. Raise it past θc to trigger TIR. You can also <b>drag inside the canvas</b>.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-s-wave">Laser Wavelength (λ)</label>
+              <span class="val" id="val-s-wave">532 nm</span>
+            </div>
+            <input type="range" id="slide-s-wave" min="380" max="750" step="1" value="532" oninput="TIR.onParamChange()">
+            <div class="info">Colour of the laser. Because of <b>dispersion</b>, n changes slightly with λ — so θc changes too (try it!).</div>
+            <div id="wave-preview"
+              style="height: 6px; border-radius: 3px; background: linear-gradient(to right, #7b00ff, #001eff, #00f0ff, #00ff1e, #ffea00, #ff6c00, #ff0000); margin-top: 4px;">
+            </div>
+          </div>
+
+          <button class="btn-action" onclick="TIR.goToCritical()">🎯 Go to Critical Angle (θc)</button>
+
+          <div class="plot-container">
+            <h4 id="plot-title">Reflectance Curve (R vs θi)</h4>
+            <canvas id="plot-canvas" width="280" height="140"></canvas>
+          </div>
+        </div>
+
+        <!-- FIBER CONTROLS -->
+        <div id="ctrl-fiber" class="tab-content">
+          <h3>Fiber Optic Controls</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 How an Optical Fiber Works</span>
+            A fiber is a thin <b>core</b> of high-index glass wrapped in lower-index <b>cladding</b>. Light bouncing
+            inside hits the core/cladding boundary; if its angle there exceeds the critical angle
+            <code>θc = sin⁻¹(n_clad/n_core)</code> it <b>totally reflects</b> and stays trapped — this is how a signal
+            travels kilometers with almost no loss. The <b>Numerical Aperture</b>
+            <code>NA = √(n_core² − n_clad²)</code> sets the acceptance cone. Bend the fiber or shrink the index gap and
+            the wall angle drops below θc → light <b>leaks out</b> (orange rays).
+          </div>
+
+          <div class="ctrl">
+            <label>Core material</label>
+            <select id="sel-f-core" onchange="TIR.onMaterialChange('f-core')"></select>
+            <div class="info">The inner glass. Must have the higher index for guiding.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-f-ncore">Core Index (n_core)</label>
+              <span class="val" id="val-f-ncore">1.50</span>
+            </div>
+            <input type="range" id="slide-f-ncore" min="1.30" max="1.85" step="0.01" value="1.50"
+              oninput="TIR.onParamChange()">
+            <div class="info">Larger n_core (relative to cladding) → larger NA, easier guiding.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Cladding material</label>
+            <select id="sel-f-clad" onchange="TIR.onMaterialChange('f-clad')"></select>
+            <div class="info">The outer layer. Must have the lower index.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-f-nclad">Cladding Index (n_clad)</label>
+              <span class="val" id="val-f-nclad">1.46</span>
+            </div>
+            <input type="range" id="slide-f-nclad" min="1.00" max="1.80" step="0.01" value="1.46"
+              oninput="TIR.onParamChange()">
+            <div class="info">Raise it toward n_core and guiding weakens until light leaks.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-f-curve">Fiber Bend / Curvature</label>
+              <span class="val" id="val-f-curve">0.30</span>
+            </div>
+            <input type="range" id="slide-f-curve" min="0.00" max="1.50" step="0.01" value="0.30"
+              oninput="TIR.onParamChange()">
+            <div class="info">Bends reduce the wall-incidence angle. Strong bends cause leakage even with good indices.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-f-inject">Light Entry Angle (θ₀)</label>
+              <span class="val" id="val-f-inject">8.0°</span>
+            </div>
+            <input type="range" id="slide-f-inject" min="0" max="35" step="0.5" value="8.0"
+              oninput="TIR.onParamChange()">
+            <div class="info">Angle of the ray entering the core. Steeper entry → shallower wall hits → more leakage.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-f-wave">Laser Wavelength</label>
+              <span class="val" id="val-f-wave">632 nm</span>
+            </div>
+            <input type="range" id="slide-f-wave" min="380" max="750" step="1" value="632" oninput="TIR.onParamChange()">
+            <div class="info">Changes beam colour and (via dispersion) the exact guiding angles.</div>
+          </div>
+        </div>
+
+        <!-- PRISM CONTROLS -->
+        <div id="ctrl-prism" class="tab-content">
+          <h3>Prism Controls</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 Prisms: Refraction &amp; Total Internal Reflection</span>
+            A <b>right-angle prism</b> bends a beam by 90° using a single TIR off its hypotenuse — but only if the glass
+            index is high enough that the 45° hit exceeds the critical angle (needs <code>n ≥ √2 ≈ 1.414</code>). A
+            <b>Porro prism</b> uses two TIRs to send light back 180°. An <b>equilateral/isosceles</b> prism instead
+            <b>disperses</b> white light into a spectrum, because n falls with wavelength (Cauchy), so blue bends more
+            than red. Adjust the <b>incidence angle</b> and <b>apex angle</b> below to watch the beam respond live.
+          </div>
+
+          <div class="ctrl">
+            <label>Prism type</label>
+            <div class="seg" id="seg-prism-type">
+              <button class="active" id="btn-prism-right" onclick="TIR.setPrismType('right')">Right-Angle (90°)</button>
+              <button id="btn-prism-porro" onclick="TIR.setPrismType('porro')">Porro (180°)</button>
+              <button id="btn-prism-equi" onclick="TIR.setPrismType('equi')">Equilateral</button>
+              <button id="btn-prism-iso" onclick="TIR.setPrismType('iso')">Isosceles</button>
+            </div>
+            <div class="info">Right/Porro rely on TIR; Equilateral/Isosceles show dispersion (spectrum splitting).</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Prism glass material</label>
+            <select id="sel-p-glass" onchange="TIR.onMaterialChange('p-glass')"></select>
+            <div class="info">Higher-index glass → smaller θc → easier TIR and stronger dispersion.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-nglass">Glass Index (n_glass)</label>
+              <span class="val" id="val-p-nglass">1.52</span>
+            </div>
+            <input type="range" id="slide-p-nglass" min="1.15" max="2.00" step="0.01" value="1.52"
+              oninput="TIR.onParamChange()">
+            <div class="info">Drop below 1.414 on a right-angle prism and TIR fails — light refracts out instead.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-apex">Prism Apex Angle (A)</label>
+              <span class="val" id="val-p-apex">60.0°</span>
+            </div>
+            <input type="range" id="slide-p-apex" min="30" max="90" step="1" value="60" oninput="TIR.onParamChange()">
+            <div class="info">Sharpness of the prism tip (equilateral/isosceles only). Affects deviation D = θ₁ + θ₂ − A.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-rot">🔺 Rotate Prism</label>
+              <span class="val" id="val-p-rot">0°</span>
+            </div>
+            <input type="range" id="slide-p-rot" min="-180" max="180" step="1" value="0" oninput="TIR.onParamChange()">
+            <div class="info"><b>Main control for refraction angle.</b> The laser beam stays horizontal and fixed; rotating the prism changes where &amp; at what angle the ray strikes each face. Watch the entry incidence angle update live.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-inc">Incidence Angle (θ₁)</label>
+              <span class="val" id="val-p-inc">45.0°</span>
+            </div>
+            <input type="range" id="slide-p-inc" min="0" max="80" step="0.5" value="45.0" oninput="TIR.onParamChange()">
+            <div class="info">Tilt of the incoming beam relative to the entry-face normal. <b>Now fully live</b> — the whole ray path updates as you drag.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-beams">Number of Beams</label>
+              <span class="val" id="val-p-beams">1</span>
+            </div>
+            <input type="range" id="slide-p-beams" min="1" max="7" step="2" value="1" oninput="TIR.onParamChange()">
+            <div class="info">Fan of parallel rays — useful to see a spectrum spread across several colours.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-p-wave">Laser Wavelength</label>
+              <span class="val" id="val-p-wave">510 nm</span>
+            </div>
+            <input type="range" id="slide-p-wave" min="380" max="750" step="1" value="510" oninput="TIR.onParamChange()">
+            <div class="info">Beam colour; also shifts n via dispersion so the deviation changes slightly.</div>
+          </div>
+        </div>
+
+        <!-- MIRAGE CONTROLS -->
+        <div id="ctrl-mirage" class="tab-content">
+          <h3>Mirage Controls</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 How Temperature Gradients Bend Light (Mirages)</span>
+            Air's refractive index rises with density. On a hot road, the ground warms the air just above it, so air is
+            <b>hottest and least dense near the surface</b> and cooler/denser higher up. This makes the atmosphere a
+            <b>graded-index medium</b>: n increases smoothly with height. Snell's law applied layer-by-layer gives a
+            conserved quantity <code>n(y)·cosα = const</code> (α = ray angle from horizontal). Tracing this, a
+            downward sky ray bends away from the normal at every layer until it curves back up — a continuous version
+            of <b>Total Internal Reflection</b>. Your brain assumes light travels straight, so it places the source
+            <i>below</i> the road: the shimmering "water" of an <b>inferior mirage</b>. A <b>superior mirage</b>
+            (cold sea below, warm air aloft — an inversion) inverts the gradient and lifts distant objects into view.
+          </div>
+
+          <div class="ctrl">
+            <label>Mirage type</label>
+            <div class="seg" id="seg-mirage-type">
+              <button class="active" id="btn-mir-inf" onclick="TIR.setMirageType('inferior')">Inferior (hot ground)</button>
+              <button id="btn-mir-sup" onclick="TIR.setMirageType('superior')">Superior (inversion)</button>
+            </div>
+            <div class="info"><b>Inferior</b>: hot surface, n rises with height → image appears below the ground (the classic "puddle"). <b>Superior</b>: cold surface + warm air aloft (inversion), n falls with height → image floats above the real object.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-m-grad">Refractive-index contrast</label>
+              <span class="val" id="val-m-grad">0.060</span>
+            </div>
+            <input type="range" id="slide-m-grad" min="0.005" max="0.120" step="0.001" value="0.060"
+              oninput="TIR.onParamChange()">
+            <div class="info">Size of the index difference Δn between the surface layer and the top of the atmosphere. Bigger Δn → stronger bending and a more pronounced mirage.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-m-theta">Sky-ray Launch Angle</label>
+              <span class="val" id="val-m-theta">-1.5°</span>
+            </div>
+            <input type="range" id="slide-m-theta" min="-6" max="-0.2" step="0.1" value="-1.5" oninput="TIR.onParamChange()">
+            <div class="info">Initial downward tilt of the incoming sky ray. Steeper rays hit denser layers faster and curve more sharply. Negative = pointing downward.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-m-height">Atmosphere thickness</label>
+              <span class="val" id="val-m-height">1.0×</span>
+            </div>
+            <input type="range" id="slide-m-height" min="0.6" max="1.6" step="0.05" value="1.0" oninput="TIR.onParamChange()">
+            <div class="info">Vertical extent of the graded layer. A thicker layer bends the ray over a longer, gentler arc.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-m-wave">Light Wavelength</label>
+              <span class="val" id="val-m-wave">600 nm</span>
+            </div>
+            <input type="range" id="slide-m-wave" min="380" max="750" step="1" value="600" oninput="TIR.onParamChange()">
+            <div class="info">Colour of the traced ray (visual only).</div>
+          </div>
+        </div>
+
+        <!-- RAINBOW CONTROLS -->
+        <div id="ctrl-rainbow" class="tab-content">
+          <h3>Rainbow (TIR in Raindrop) Controls</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 How a Rainbow Forms in a Raindrop</span>
+            A rainbow is a chain of three optical events in one spherical drop:
+            <b>(1) Entry refraction</b> — sunlight entering the drop bends toward the normal (air→water); because of
+            <b>dispersion</b>, violet bends more than red. <b>(2) Total Internal Reflection</b> at the back wall — the
+            internal angle exceeds the critical angle <code>θc = sin⁻¹(1/n) ≈ 48.6°</code> for water, so the light
+            reflects completely back toward the front. <b>(3) Exit refraction</b> — on leaving (water→air) it bends
+            again, separating colours further. Each colour is brightest at its own minimum-deviation "rainbow angle"
+            (≈42° primary, ≈51° secondary). The <b>secondary bow</b> adds a second TIR, reversing the colour order and
+            appearing fainter above the primary. Drag the <b>incidence angle</b> below to steer the ray through the drop.
+          </div>
+
+          <div class="ctrl">
+            <label>Bow type</label>
+            <div class="seg" id="seg-bow-type">
+              <button class="active" id="btn-bow-primary" onclick="TIR.setBowType('primary')">Primary (1 reflection)</button>
+              <button id="btn-bow-secondary" onclick="TIR.setBowType('secondary')">Secondary (2 reflections)</button>
+            </div>
+            <div class="info">Primary = one internal TIR (~42°, red on the outside). Secondary = two TIRs (~51°, colours reversed, fainter).</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-r-inc">Angle of Incidence θᵢ (at drop surface)</label>
+              <span class="val" id="val-r-inc">59.4°</span>
+            </div>
+            <input type="range" id="slide-r-inc" min="0" max="89" step="0.1" value="59.4"
+              oninput="TIR.onRainIncidence(this.value)">
+            <div class="info">Angle between the incoming sun-ray and the <b>surface normal</b> at the entry point. This is the <b>main steering control</b> — it sets the impact parameter b/R = sin(θᵢ) and moves the whole internal path. Physically, sunlight is a fan of all these angles at once.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-r-n">Water Index (n)</label>
+              <span class="val" id="val-r-n">1.333</span>
+            </div>
+            <input type="range" id="slide-r-n" min="1.20" max="1.40" step="0.001" value="1.333"
+              oninput="TIR.onParamChange()">
+            <div class="info">Refractive index of the drop. Sets θc and how strongly colours separate.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-r-disperse">Dispersion strength</label>
+              <span class="val" id="val-r-disperse">1.00×</span>
+            </div>
+            <input type="range" id="slide-r-disperse" min="0" max="3" step="0.05" value="1.0"
+              oninput="TIR.onParamChange()">
+            <div class="info">Scales how much n varies with colour. 0 = no dispersion (no rainbow), 1× = real water, higher = exaggerated spread.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Beam display</label>
+            <div class="seg" style="grid-template-columns:repeat(3,1fr)">
+              <button class="active" id="btn-r-spectrum" onclick="TIR.setRainbowBeam('spectrum')">Spectrum</button>
+              <button id="btn-r-white" onclick="TIR.setRainbowBeam('white')">White beam</button>
+              <button id="btn-r-mono" onclick="TIR.setRainbowBeam('mono')">Mono λ</button>
+            </div>
+            <div class="info"><b>Spectrum</b> traces red→violet at the same θᵢ to show colour separation. <b>White</b> draws a single undispersed ray. <b>Mono λ</b> isolates one colour.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Ray fan (Descartes)</label>
+            <div class="seg" style="grid-template-columns:repeat(2,1fr)">
+              <button id="btn-r-fan" onclick="TIR.toggleRainbowFan()">Show ray fan</button>
+              <button class="btn-action" style="grid-column:span 2" onclick="TIR.findRainbowRay()">🎯 Find minimum-deviation (rainbow) ray</button>
+            </div>
+            <div class="info"><b>Ray fan</b> sends parallel sun-rays across the whole drop (Descartes' original construction) — you can see how only rays near the rainbow angle emerge clustered, while others scatter. <b>Find rainbow ray</b> snaps θᵢ to the angle of minimum deviation for red light.</div>
+          </div>
+        </div>
+
+        <!-- LENS CONTROLS -->
+        <div id="ctrl-lens" class="tab-content">
+          <h3>Lens Formula &amp; Magnification</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 Thin-Lens Equation &amp; Three Principal Rays</span>
+            A thin lens obeys <code>1/o + 1/i = 1/f</code> (o = object distance, i = image distance, f = focal length).
+            Magnification is <code>M = −i/o</code> — the minus sign means the image is inverted.
+            <b>Three principal rays</b> locate the image: (1) through the lens <b>centre</b> — goes straight;
+            (2) <b>parallel</b> to the axis — exits through the far focal point; (3) through the <b>near focal point</b> —
+            exits parallel. Converging (convex) lenses have f &gt; 0; diverging (concave) lenses have f &lt; 0.
+            Drag the object in the canvas, or use the sliders.
+          </div>
+
+          <div class="ctrl">
+            <label>Lens type</label>
+            <div class="seg" id="seg-lens-type">
+              <button class="active" id="btn-lens-convex" onclick="TIR.setLensType('convex')">Converging (convex)</button>
+              <button id="btn-lens-concave" onclick="TIR.setLensType('concave')">Diverging (concave)</button>
+            </div>
+            <div class="info"><b>Convex</b> (thicker in the middle, f&gt;0): converges parallel rays — can form real OR virtual images. <b>Concave</b> (thinner in the middle, f&lt;0): diverges rays — always forms a virtual, upright, reduced image.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-l-f">Focal length f</label>
+              <span class="val" id="val-l-f">10.0 cm</span>
+            </div>
+            <input type="range" id="slide-l-f" min="4" max="22" step="0.5" value="10" oninput="TIR.onParamChange()">
+            <div class="info">For a converging lens f &gt; 0; for a diverging lens the sign is flipped automatically. Dioptric power D = 1/f(m). Shorter f → stronger lens.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-l-o">Object distance o</label>
+              <span class="val" id="val-l-o">20.0 cm</span>
+            </div>
+            <input type="range" id="slide-l-o" min="2" max="60" step="0.5" value="20" oninput="TIR.onParamChange()">
+            <div class="info">How far the object (arrow) is from the lens. For a convex lens: o &gt; 2f → real inverted reduced; o = 2f → same size; f &lt; o &lt; 2f → magnified; o &lt; f → virtual upright magnified.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-l-h">Object height hₒ</label>
+              <span class="val" id="val-l-h">3.0 cm</span>
+            </div>
+            <input type="range" id="slide-l-h" min="1" max="6" step="0.1" value="3" oninput="TIR.onParamChange()">
+            <div class="info">Height of the object arrow. The image height follows from M·hₒ.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Object presets (convex lens cases)</label>
+            <div class="seg">
+              <button onclick="TIR.applyLensCase('far')">o &gt; 2f</button>
+              <button onclick="TIR.applyLensCase('2f')">o = 2f</button>
+              <button onclick="TIR.applyLensCase('mid')">f &lt; o &lt; 2f</button>
+              <button onclick="TIR.applyLensCase('near')">o &lt; f</button>
+            </div>
+            <div class="info">Jump to the four classic object-distance regimes from Figure 3.22 of the chapter.</div>
+          </div>
+
+          <div class="ctrl">
+            <label>Ray display</label>
+            <div class="seg" style="grid-template-columns:repeat(2,1fr)">
+              <button id="btn-l-rays3" class="active" onclick="TIR.setLensRays('3')">3 principal rays</button>
+              <button id="btn-l-raysfan" onclick="TIR.setLensRays('fan')">Ray fan</button>
+            </div>
+            <div class="info"><b>3 principal rays</b>: the textbook ray-tracing construction. <b>Ray fan</b>: several parallel rays from the object tip — shows how the lens focuses (or diverges) a beam.</div>
+          </div>
+
+          <!-- Lens worked-solution readout -->
+          <div class="formula-box" id="lens-extras">
+            <div class="title">🔎 Lens-formula solution</div>
+            <div class="eq" id="lens-eq">1/o + 1/i = 1/f</div>
+            <div class="eq" id="lens-mag">M = −i/o</div>
+            <div id="lens-notes" style="font-size:11.5px;color:var(--ink-soft);padding-top:4px;"></div>
+          </div>
+        </div>
+
+        <!-- NUMERICAL SOLVER CONTROLS -->
+        <div id="ctrl-solver" class="tab-content">
+          <h3>Numerical Solver (NCERT-style)</h3>
+
+          <div class="intro">
+            <span class="intro-title">📖 Complete Step-by-Step Refraction Solver</span>
+            Type in n₁, n₂ and θᵢ and the solver walks through <b>every</b> relation a board exam expects:
+            <b>(1)</b> critical angle <code>θc = sin⁻¹(n₂/n₁)</code>;
+            <b>(2)</b> Snell's law <code>n₁sinθᵢ = n₂sinθₜ</code> → refracted angle θₜ;
+            <b>(3)</b> Fresnel intensity split <code>Rs, Rp, R̄, T</code>;
+            <b>(4)</b> the TIR verdict. Brewster's angle <code>tan⁻¹(n₂/n₁)</code> (where Rp = 0, reflected light is
+            fully s-polarized) and the angle of minimum deviation are reported too. TIR is only possible when
+            <b>n₁ &gt; n₂</b>.
+          </div>
+
+          <div class="ctrl">
+            <label>NCERT preset examples</label>
+            <div class="seg">
+              <button onclick="TIR.applySolverExample('glass-air')">Glass→Air</button>
+              <button onclick="TIR.applySolverExample('water-air')">Water→Air</button>
+              <button onclick="TIR.applySolverExample('diamond-air')">Diamond→Air</button>
+              <button onclick="TIR.applySolverExample('crown-air')">Crown→Air</button>
+              <button onclick="TIR.applySolverExample('glass-water')">Glass→Water</button>
+              <button onclick="TIR.applySolverExample('sapphire-air')">Sapphire→Air</button>
+              <button onclick="TIR.applySolverExample('at-brewster')">@Brewster</button>
+              <button onclick="TIR.applySolverExample('at-critical')">@Critical</button>
+            </div>
+            <div class="info">Classic textbook pairs plus <b>@Brewster</b> (snap θᵢ to the polarizing angle) and <b>@Critical</b> (snap θᵢ = θc).</div>
+          </div>
+
+          <div class="ctrl">
+            <label for="inp-sol-n1">Refractive index n₁ (denser)</label>
+            <input type="number" id="inp-sol-n1" min="1.00" max="2.50" step="0.001" value="1.50"
+              oninput="TIR.onParamChange()">
+            <div class="info">Index of the first (denser) medium. For TIR you need n₁ &gt; n₂.</div>
+          </div>
+
+          <div class="ctrl">
+            <label for="inp-sol-n2">Refractive index n₂ (rarer)</label>
+            <input type="number" id="inp-sol-n2" min="1.00" max="2.50" step="0.001" value="1.00"
+              oninput="TIR.onParamChange()">
+            <div class="info">Index of the second (rarer) medium.</div>
+          </div>
+
+          <div class="ctrl">
+            <label for="inp-sol-theta">Angle of incidence θᵢ (degrees)</label>
+            <input type="number" id="inp-sol-theta" min="0" max="89" step="0.1" value="42.0"
+              oninput="TIR.onParamChange()">
+            <div class="info">Incident angle to test against θc. The diagram on the left animates with the verdict.</div>
+          </div>
+
+          <div class="ctrl">
+            <div class="row">
+              <label for="slide-sol-wave">Wavelength (optional, for color)</label>
+              <span class="val" id="val-sol-wave">532 nm</span>
+            </div>
+            <input type="range" id="slide-sol-wave" min="380" max="750" step="1" value="532" oninput="TIR.onParamChange()">
+            <div class="info">Only sets the beam colour in the diagram.</div>
+          </div>
+
+          <!-- Extended solver readouts: Snell, Fresnel split, Brewster -->
+          <div class="formula-box" id="solver-extras">
+            <div class="title">🔎 Full worked solution</div>
+            <div class="eq" id="solver-snell">Snell: n₁sinθᵢ = n₂sinθₜ</div>
+            <div class="eq" id="solver-fresnel">Fresnel: Rs, Rp, R̄</div>
+            <div class="eq" id="solver-brewster">Brewster θB = tan⁻¹(n₂/n₁)</div>
+            <div id="solver-notes" style="font-size:11.5px;color:var(--ink-soft);padding-top:4px;"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- FOOTER CREDIT -->
+    <footer class="credit">
+      ©️©️Priyesh Tripathi©️©️
+    </footer>
+  </div>
+
+  <!-- ============================================================
+       TIR VIRTUAL LAB  —  MODULAR PHYSICS + RENDER ENGINE
+       Module layout (single IIFE, exposed as window.TIR):
+         • MATERIALS   — Cauchy dispersion table + helpers
+         • MathX       — pure optics math (snell, fresnel, refract/reflect, intersect)
+         • Draw        — canvas drawing primitives + pseudo-3D helpers
+         • Tween       — smoothing manager (no instant jumps)
+         • Modes       — per-mode update + render (sandbox/fiber/prism/mirage/rainbow/solver)
+         • Plot        — animated reflectance graph
+         • UI          — mode switching, sliders, buttons, drag, theme
+         • loop()      — requestAnimationFrame orchestrator
+       ============================================================ -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ==========================================================
+         MODULE: MATERIALS  (Cauchy dispersion n(λ) = A + B/λ²)
+         B in units of μm² (so pass λ in μm). Tabulated for the
+         sodium D-line ~0.589 μm unless noted.
+         ========================================================== */
+      const MATERIALS = {
+        vacuum:  { name: 'Vacuum',          A: 1.00000, B: 0.0 },
+        air:     { name: 'Air',             A: 1.00027, B: 0.0042 }, // ~dispersive air
+        water:   { name: 'Water',           A: 1.324,   B: 0.0034 },
+        ice:     { name: 'Ice',             A: 1.307,   B: 0.0036 },
+        oil:     { name: 'Oil (typical)',   A: 1.46,    B: 0.0065 },
+        silica:  { name: 'Fused Silica',    A: 1.4580,  B: 0.00354 },
+        crown:   { name: 'Crown Glass',     A: 1.5046,  B: 0.00420 },
+        glass:   { name: 'Glass (generic)', A: 1.5046,  B: 0.00500 },
+        flint:   { name: 'Flint Glass',     A: 1.615,   B: 0.00900 },
+        sapphire:{ name: 'Sapphire',        A: 1.756,   B: 0.00730 },
+        diamond: { name: 'Diamond',         A: 2.395,   B: 0.00820 },
+      };
+
+      /** Refractive index at wavelength λ (nm) using Cauchy's equation. */
+      function nIndex(matKey, lambdaNm) {
+        const m = MATERIALS[matKey] || MATERIALS.air;
+        const lamMu = Math.max(0.1, lambdaNm * 1e-3); // nm → μm
+        return m.A + m.B / (lamMu * lamMu);
+      }
+
+      /** Index from raw A/B given λ (nm) — used when user fine-tunes a slider. */
+      function nFromAB(A, B, lambdaNm) {
+        const lamMu = Math.max(0.1, lambdaNm * 1e-3);
+        return A + B / (lamMu * lamMu);
+      }
+
+      /* ==========================================================
+         MODULE: MathX — pure optics math (NaN-safe)
+         ========================================================== */
+      const MathX = {
+        clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); },
+        deg(r) { return r * 180 / Math.PI; },
+        rad(d) { return d * Math.PI / 180; },
+
+        /** Critical angle (rad). null if n1<=n2 (TIR impossible). */
+        criticalAngle(n1, n2) {
+          if (n1 <= n2) return null;
+          const ratio = this.clamp(n2 / n1, -1, 1);
+          return Math.asin(ratio);
+        },
+
+        /** Snell: refracted angle (rad). null on TIR. NaN-safe. */
+        snell(n1, thetaI, n2) {
+          const s = (n1 / n2) * Math.sin(thetaI);
+          if (Math.abs(s) > 1.0 + 1e-9) return null;       // TIR
+          return Math.asin(this.clamp(s, -1, 1));
+        },
+
+        /** Fresnel coefficients. Returns {R,T,thetaT,tir}. Robust at grazing + normal. */
+        fresnel(n1, n2, thetaI) {
+          const sinT = (n1 / n2) * Math.sin(thetaI);
+          if (sinT * sinT >= 1.0 - 1e-12) {                 // TIR (incl. grazing boundary)
+            return { R: 1.0, T: 0.0, thetaT: null, tir: true };
+          }
+          const thetaT = Math.asin(this.clamp(sinT, -1, 1));
+          const cI = Math.cos(thetaI), cT = Math.cos(thetaT);
+          // Normal incidence closed form avoids div-by-zero and is exact.
+          if (Math.abs(thetaI) < 1e-7) {
+            const r = (n1 - n2) / (n1 + n2);
+            const R = r * r;
+            return { R, T: 1 - R, thetaT, tir: false };
+          }
+          const rs = (n1 * cI - n2 * cT) / (n1 * cI + n2 * cT);
+          const rp = (n2 * cI - n1 * cT) / (n2 * cI + n1 * cT);
+          const R = 0.5 * (rs * rs + rp * rp);
+          return { R: this.clamp(R, 0, 1), T: this.clamp(1 - R, 0, 1), thetaT, tir: false };
+        },
+
+        /** Reflect direction V about surface with outward normal N. */
+        reflect(V, N) {
+          const d = V.x * N.x + V.y * N.y;     // V·N (N outward ⇒ d>0 hitting from inside)
+          return { x: V.x - 2 * d * N.x, y: V.y - 2 * d * N.y };
+        },
+
+        /** Refract direction V (unit). N = outward normal pointing AGAINST V
+         *  (i.e. from the surface into the medium the ray is coming FROM).
+         *  Implements the vector form of Snell's law:
+         *    T = η·V + (η·cosI − cosT)·N̂
+         *  where cosI = −V·N (positive), cosT = √(1−η²(1−cosI²)), η = n1/n2.
+         *  Returns the refracted unit vector, or null on Total Internal Reflection. */
+        refract(V, N, n1, n2) {
+          let cosI = -(V.x * N.x + V.y * N.y);
+          let NN = N;
+          if (cosI < 0) { cosI = -cosI; NN = { x: -N.x, y: -N.y }; }
+          const eta = n1 / n2;
+          const k = 1 - eta * eta * (1 - cosI * cosI);
+          if (k < 0) return null;                          // TIR
+          const cosT = Math.sqrt(k);
+          const f = eta * cosI - cosT;                      // NOTE: minus sign (vector Snell)
+          const out = { x: eta * V.x + f * NN.x, y: eta * V.y + f * NN.y };
+          const L = Math.hypot(out.x, out.y) || 1;
+          return { x: out.x / L, y: out.y / L };
+        },
+
+        /** Ray (p0 + t·(p1−p0), t≥0) vs segment (a,b). Returns {x,y,t} or null. */
+        intersect(p0, p1, a, b) {
+          const rx = p1.x - p0.x, ry = p1.y - p0.y;
+          const sx = b.x - a.x, sy = b.y - a.y;
+          const denom = rx * sy - ry * sx;
+          if (Math.abs(denom) < 1e-10) return null;
+          const t = ((a.x - p0.x) * sy - (a.y - p0.y) * sx) / denom;
+          const u = (rx * (a.y - p0.y) - ry * (a.x - p0.x)) / denom;
+          if (t >= 0 && u >= 0 && u <= 1) {
+            return { x: p0.x + t * rx, y: p0.y + t * ry, t, u };
+          }
+          return null;
+        }
+      };
+
+      /* ==========================================================
+         MODULE: Draw — canvas drawing primitives + pseudo-3D
+         ========================================================== */
+      const Draw = {
+        ctx: null,
+        /** Visible-spectrum rgba from wavelength (nm). */
+        wavelengthRGBA(wl, a) {
+          let r = 0, g = 0, b = 0;
+          if (wl >= 380 && wl < 440) { r = -(wl - 440) / 60; g = 0; b = 1; }
+          else if (wl < 490) { r = 0; g = (wl - 440) / 50; b = 1; }
+          else if (wl < 510) { r = 0; g = 1; b = -(wl - 510) / 20; }
+          else if (wl < 580) { r = (wl - 510) / 70; g = 1; b = 0; }
+          else if (wl < 645) { r = 1; g = -(wl - 645) / 65; b = 0; }
+          else if (wl <= 780) { r = 1; g = 0; b = 0; }
+          let f = 1;
+          if (wl < 420) f = 0.3 + 0.7 * (wl - 380) / 40;
+          else if (wl > 700) f = 0.3 + 0.7 * (780 - wl) / 80;
+          const R = Math.round(r * f * 255), G = Math.round(g * f * 255), B = Math.round(b * f * 255);
+          return `rgba(${R},${G},${B},${a == null ? 1 : a})`;
+        },
+        /** Replace alpha of an rgba() string. */
+        withAlpha(rgba, a) {
+          const m = rgba.match(/rgba?\(([^)]+)\)/);
+          if (!m) return rgba;
+          const p = m[1].split(',').map(s => s.trim());
+          return `rgba(${p[0]},${p[1]},${p[2]},${a})`;
+        },
+
+        /** Volumetric glowing laser ray (core + halo + travelling wave). */
+        glowRay(x1, y1, x2, y2, color, intensity, opts) {
+          opts = opts || {};
+          const ctx = this.ctx;
+          intensity = MathX.clamp(intensity == null ? 1 : intensity, 0, 1);
+          const len = Math.hypot(x2 - x1, y2 - y1);
+          if (len < 0.5 || intensity <= 0.005) return;
+          const w = opts.width || 1;
+          // Outer halo
+          ctx.lineWidth = 7 * w;  ctx.strokeStyle = this.withAlpha(color, 0.10 * intensity);
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          // Inner halo
+          ctx.lineWidth = 3.6 * w; ctx.strokeStyle = this.withAlpha(color, 0.40 * intensity);
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          // Core
+          ctx.lineWidth = 1.7 * w; ctx.strokeStyle = this.withAlpha(color, Math.min(1, 0.85 * intensity + 0.15));
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          // Travelling sinusoid
+          if (opts.wave !== false && intensity > 0.08 && len > 8) {
+            const ang = Math.atan2(y2 - y1, x2 - x1);
+            const sa = Math.sin(ang), ca = Math.cos(ang);
+            ctx.strokeStyle = `rgba(255,255,255,${0.35 * intensity})`;
+            ctx.lineWidth = 0.9;
+            ctx.beginPath();
+            let first = true;
+            for (let d = 0; d < len; d += 2) {
+              const off = Math.sin(d * 0.16 - state.waveOffset) * 2.3 * intensity;
+              const wx = x1 + d * ca - off * sa;
+              const wy = y1 + d * sa + off * ca;
+              if (first) { ctx.moveTo(wx, wy); first = false; } else ctx.lineTo(wx, wy);
+            }
+            ctx.stroke();
+          }
+        },
+
+        /** Dashed normal line through point along direction (dx,dy) (unit). */
+        normal(x, y, dx, dy, len, theme) {
+          const ctx = this.ctx;
+          ctx.save();
+          ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.32)' : 'rgba(15,23,42,0.35)';
+          ctx.lineWidth = 1.1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(x - dx * len, y - dy * len);
+          ctx.lineTo(x + dx * len, y + dy * len);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        },
+
+        /** Angle arc with label between two unit directions d1,d2 (about origin o). */
+        angleArc(o, d1, d2, r, color, label, theme) {
+          const ctx = this.ctx;
+          const a1 = Math.atan2(d1.y, d1.x);
+          const a2 = Math.atan2(d2.y, d2.x);
+          let da = a2 - a1;
+          while (da > Math.PI) da -= 2 * Math.PI;
+          while (da < -Math.PI) da += 2 * Math.PI;
+          const ccw = da < 0;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(o.x, o.y, r, a1, a2, ccw);
+          ctx.stroke();
+          if (label) {
+            const mid = a1 + da / 2;
+            ctx.fillStyle = color;
+            ctx.font = "bold 11px 'JetBrains Mono'";
+            ctx.fillText(label, o.x + (r + 12) * Math.cos(mid) - 14, o.y + (r + 12) * Math.sin(mid) + 4);
+          }
+        },
+
+        label(x, y, text, color, size, align) {
+          const ctx = this.ctx;
+          ctx.fillStyle = color;
+          ctx.font = `${size || 12}px 'Outfit'`;
+          ctx.textAlign = align || 'left';
+          ctx.fillText(text, x, y);
+          ctx.textAlign = 'left';
+        },
+
+        /** Pseudo-3D tilted medium slab — used for sandbox. */
+        tiltedSlab(x, y, w, h, faceColor, theme) {
+          const ctx = this.ctx;
+          const skew = 26; // depth skew for perspective
+          // Top face (lighter) — gives a sense of a thick block
+          ctx.fillStyle = this.withAlpha(faceColor, 1);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + w, y);
+          ctx.lineTo(x + w - skew * 0.35, y - skew * 0.5);
+          ctx.lineTo(x - skew * 0.35, y - skew * 0.5);
+          ctx.closePath();
+          ctx.globalAlpha = 0.5;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          // Front face
+          ctx.fillStyle = faceColor;
+          ctx.fillRect(x, y, w, h);
+        },
+
+        /** Highlight marker dot (reflection point / leak). */
+        marker(x, y, color, r) {
+          const ctx = this.ctx;
+          r = r || 4;
+          ctx.save();
+          ctx.fillStyle = this.withAlpha(color, 0.25);
+          ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.restore();
+        }
+      };
+
+      /* ==========================================================
+         MODULE: Tween — smooths values so changes never jump
+         ========================================================== */
+      const Tween = {
+        items: {},
+        set(key, v) { this.items[key] = { cur: v, target: v }; },
+        to(key, v) {
+          if (!this.items[key]) this.items[key] = { cur: v, target: v };
+          this.items[key].target = v;
+        },
+        get(key) { const it = this.items[key]; return it ? it.cur : 0; },
+        tick(dt) {
+          for (const k in this.items) {
+            const it = this.items[k];
+            const k1 = 1 - Math.pow(0.0001, dt); // frame-rate independent lerp
+            it.cur += (it.target - it.cur) * Math.min(1, k1 * 8);
+          }
+        }
+      };
+
+      /* ==========================================================
+         GLOBAL STATE
+         ========================================================== */
+      const state = {
+        mode: 'sandbox',
+        theme: 'dark',
+        waveOffset: 0,
+        dragging: false,
+        prismType: 'right',
+        prismRotation: 0,
+        mirageType: 'inferior',
+        bowType: 'primary',
+        rainbowBeam: 'spectrum',
+        rainbowFan: false,
+        lensType: 'convex',
+        lensRays: '3',
+        // material A/B pairs the sliders currently represent (for dispersion readout)
+        matAB: {
+          's-n1': { A: MATERIALS.glass.A, B: MATERIALS.glass.B },
+          's-n2': { A: MATERIALS.air.A, B: MATERIALS.air.B },
+          'f-core': { A: MATERIALS.silica.A, B: MATERIALS.silica.B },
+          'f-clad': { A: 1.4520, B: 0.00300 },
+          'p-glass': { A: MATERIALS.crown.A, B: MATERIALS.crown.B },
+        }
+      };
+
+      /* DOM refs (cached once) */
+      const canvas = document.getElementById('main-canvas');
+      const ctx = canvas.getContext('2d');
+      const plotCanvas = document.getElementById('plot-canvas');
+      const plotCtx = plotCanvas.getContext('2d');
+      Draw.ctx = ctx;
+
+      const $ = id => document.getElementById(id);
+      const slider = id => parseFloat($(id).value);
+
+      /** Effective dispersive index from a slider, given current wavelength.
+       *  Slider value is the index at the sodium D-line; we treat its A as
+       *  n(D) and apply the stored material's dispersion coefficient B. */
+      function dispersiveIndex(slot, lambdaNm, sliderId) {
+        const nD = slider(sliderId);
+        const ab = state.matAB[slot] || { A: nD, B: 0 };
+        // keep n(D) from slider, inherit B from material → n(λ)=nD + B(1/λ² − 1/λD²)
+        const lamMu = lambdaNm * 1e-3;
+        const lamD = 0.589;
+        return nD + ab.B * (1 / (lamMu * lamMu) - 1 / (lamD * lamD));
+      }
+
+      /* ==========================================================
+         UI: material selects population
+         ========================================================== */
+      function fillMaterialSelects() {
+        const pairs = [
+          ['sel-s-n1', 'glass'], ['sel-s-n2', 'air'],
+          ['sel-f-core', 'silica'], ['sel-f-clad', 'silica'],
+          ['sel-p-glass', 'crown']
+        ];
+        pairs.forEach(([selId, def]) => {
+          const sel = $(selId); if (!sel) return;
+          sel.innerHTML = '';
+          for (const key in MATERIALS) {
+            const o = document.createElement('option');
+            o.value = key;
+            o.textContent = `${MATERIALS[key].name}  (n≈${MATERIALS[key].A.toFixed(3)})`;
+            sel.appendChild(o);
+          }
+          sel.value = def;
+        });
+      }
+
+      function onMaterialChange(slot) {
+        const selId = 'sel-' + slot;
+        const key = $(selId).value;
+        const m = MATERIALS[key] || MATERIALS.air;
+        state.matAB[slot] = { A: m.A, B: m.B };
+        // push the D-line index into the matching slider
+        const sliderMap = { 's-n1': 'slide-s-n1', 's-n2': 'slide-s-n2', 'f-core': 'slide-f-ncore', 'f-clad': 'slide-f-nclad', 'p-glass': 'slide-p-nglass' };
+        const s = $(sliderMap[slot]);
+        if (s) { s.value = m.A; }
+        onParamChange();
+      }
+
+      /* ==========================================================
+         UI: theme + mode switching
+         ========================================================== */
+      function toggleTheme() {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', state.theme);
+      }
+
+      const MODE_META = {
+        sandbox: { title: 'TIR Sandbox', drag: true,
+          exp: ['Sandbox Physical Behavior',
+            'Light goes from a DENSER medium (higher n₁, lower half) to a RARER medium (lower n₂, upper half). The incident ray, the normal and all three rays are labelled. As θi grows past the critical angle θc, the refracted ray vanishes (grazing then evanescent) and ALL light reflects — Total Internal Reflection. Try changing wavelength: dispersion shifts θc!'] },
+        fiber: { title: 'Optical Fiber Waveguide', drag: false,
+          exp: ['Optical Fiber Transmission',
+            'Light is trapped inside a higher-index CORE wrapped by lower-index CLADDING. At every core/cladding hit, if the incidence angle exceeds θc (computed from n_core and n_clad), the ray totally reflects and propagates losslessly. Bend the fiber or shrink Δn and the incidence angle drops below θc → light LEAKS out (marked in orange).'] },
+        prism: { title: 'Glass Prism — Refraction & TIR', drag: false,
+          exp: ['Prisms, Retroreflection & Dispersion',
+            'Right-angle and Porro prisms rely on TIR off the hypotenuse (needs n ≥ √2 ≈ 1.414 for a 45° hit). An equilateral prism splits white light into a spectrum because n depends on wavelength (Cauchy dispersion) — blue bends more than red. Adjust apex angle A and incidence θ₁ and read the deviation D = θ₁ + θ₂ − A.'] },
+        mirage: { title: 'Atmospheric Mirage (graded index)', drag: false,
+          exp: ['How Mirages Form',
+            'Air near a hot road is less dense → lower n. The atmosphere is a graded-index medium: n rises smoothly with height. A sky ray travelling downward enters ever-rarer layers and bends away from the normal until, past the critical angle, it undergoes TIR and climbs to your eye — you perceive a "wet" virtual image below the road. A superior mirage (cold surface, inversion) inverts this.'] },
+        rainbow: { title: 'Rainbow — TIR inside a raindrop', drag: false,
+          exp: ['TIR and the Rainbow',
+            'Sunlight enters a spherical drop, refracts (splitting colours), undergoes ONE Total Internal Reflection on the back, then refracts out: the PRIMARY bow. A SECONDARY bow uses two TIRs, is fainter, wider (~51°) and has reversed colours. Each colour is strongest at its own "rainbow angle" because of the minimum-deviation ( Descartes ) ray — pure TIR optics.'] },
+        lens: { title: 'Lens Formula & Magnification', drag: true,
+          exp: ['Thin-Lens Ray Tracing (Lens Maker — Chapter 3)',
+            'The thin-lens equation 1/o + 1/i = 1/f links object distance o, image distance i and focal length f. The three principal rays locate the image: (1) a ray through the lens centre goes straight; (2) a ray parallel to the axis passes through the far focal point; (3) a ray through the near focal point exits parallel. Magnification M = −i/o: negative means inverted. Real images form when rays actually converge (o > f for a converging lens); virtual images appear where backward extensions of the diverging rays meet (o < f, or any diverging lens). Drag inside the canvas to slide the object!'] },
+        solver: { title: 'Numerical Solver — step by step', drag: false,
+          exp: ['Numerical TIR Solver',
+            'Type n₁, n₂ and θi and watch every algebraic step: θc = sin⁻¹(n₂/n₁), then compare θi to θc. The ray diagram on the left animates with the correct verdict. Use the NCERT presets for the classic textbook cases.'] },
+      };
+
+      function switchMode(mode) {
+        state.mode = mode;
+        document.querySelectorAll('.mode-tabs button').forEach(b => b.classList.remove('active'));
+        $('tab-' + mode).classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        $('ctrl-' + mode).classList.add('active');
+
+        const meta = MODE_META[mode];
+        $('stage-title').textContent = meta.title;
+        $('drag-hint').style.display = meta.drag ? 'block' : 'none';
+        $('exp-title').textContent = meta.exp[0];
+        $('exp-text').textContent = meta.exp[1];
+        // steps panel only relevant to sandbox + solver
+        $('steps-panel').style.display = (mode === 'sandbox' || mode === 'solver') ? 'flex' : 'none';
+        onParamChange();
+      }
+
+      /* ==========================================================
+         UI helpers for sandbox/solver
+         ========================================================== */
+      function applyPreset(m1, m2) {
+        $('sel-s-n1').value = m1; onMaterialChange('s-n1');
+        $('sel-s-n2').value = m2; onMaterialChange('s-n2');
+      }
+
+      function goToCritical() {
+        const n1 = dispersiveIndex('s-n1', slider('slide-s-wave'), 'slide-s-n1');
+        const n2 = dispersiveIndex('s-n2', slider('slide-s-wave'), 'slide-s-n2');
+        const tc = MathX.criticalAngle(n1, n2);
+        if (tc == null) return;
+        Tween.to('sandboxTheta', MathX.deg(tc));
+        // also drive the actual slider for readout sync after sweep
+        setTimeout(() => {
+          $('slide-s-theta').value = MathX.deg(tc).toFixed(1);
+          Tween.set('sandboxTheta', MathX.deg(tc));
+          onParamChange();
+        }, 650);
+      }
+
+      /* ==========================================================
+         Prism / mirage / rainbow / solver type setters
+         ========================================================== */
+      function setPrismType(t) {
+        state.prismType = t;
+        ['right', 'porro', 'equi', 'iso'].forEach(k => {
+          const map = { right: 'btn-prism-right', porro: 'btn-prism-porro', equi: 'btn-prism-equi', iso: 'btn-prism-iso' };
+          $(map[k]).classList.toggle('active', k === t);
+        });
+        onParamChange();
+      }
+      function setMirageType(t) {
+        state.mirageType = t;
+        $('btn-mir-inf').classList.toggle('active', t === 'inferior');
+        $('btn-mir-sup').classList.toggle('active', t === 'superior');
+        onParamChange();
+      }
+      function setBowType(t) {
+        state.bowType = t;
+        $('btn-bow-primary').classList.toggle('active', t === 'primary');
+        $('btn-bow-secondary').classList.toggle('active', t === 'secondary');
+        onParamChange();
+      }
+      function setRainbowBeam(t) {
+        state.rainbowBeam = t;
+        $('btn-r-spectrum').classList.toggle('active', t === 'spectrum');
+        $('btn-r-white').classList.toggle('active', t === 'white');
+        $('btn-r-mono').classList.toggle('active', t === 'mono');
+        onParamChange();
+      }
+      function toggleRainbowFan() {
+        state.rainbowFan = !state.rainbowFan;
+        onParamChange();
+      }
+      // Snap incidence to the minimum-deviation (Descartes) rainbow ray for red light.
+      function findRainbowRay() {
+        const n = slider('slide-r-n');
+        const kTIR = state.bowType === 'secondary' ? 2 : 1;
+        const bMin = findMinDeviationImpact(n, kTIR);
+        const thetaMin = MathX.deg(Math.asin(MathX.clamp(bMin, 0, 0.999)));
+        $('slide-r-inc').value = thetaMin.toFixed(1);
+        state.rainbowFan = true;
+        onParamChange();
+      }
+      // Called from the rainbow incidence slider: keeps slider as the single source of truth.
+      function onRainIncidence(v) {
+        $('slide-r-inc').value = parseFloat(v);
+        onParamChange();
+      }
+
+      /* ---- Lens mode setters ---- */
+      function setLensType(t) {
+        state.lensType = t;
+        $('btn-lens-convex').classList.toggle('active', t === 'convex');
+        $('btn-lens-concave').classList.toggle('active', t === 'concave');
+        onParamChange();
+      }
+      function setLensRays(r) {
+        state.lensRays = r;
+        $('btn-l-rays3').classList.toggle('active', r === '3');
+        $('btn-l-raysfan').classList.toggle('active', r === 'fan');
+        onParamChange();
+      }
+      // Snap the object to the classic chapter regimes (uses current f)
+      function applyLensCase(k) {
+        const fRaw = slider('slide-l-f');
+        const f = (state.lensType === 'concave') ? -fRaw : fRaw;
+        const set = (o) => { $('slide-l-o').value = o; onParamChange(); };
+        if (k === 'far') set((3 * fRaw).toFixed(1));        // o > 2f
+        else if (k === '2f') set((2 * fRaw).toFixed(1));    // o = 2f
+        else if (k === 'mid') set((1.5 * fRaw).toFixed(1)); // f < o < 2f
+        else if (k === 'near') set((0.7 * fRaw).toFixed(1));// o < f
+      }
+
+      const SOLVER_EXAMPLES = {
+        'glass-air':    { n1: 1.50, n2: 1.00, th: 43 },
+        'water-air':    { n1: 1.33, n2: 1.00, th: 49 },
+        'diamond-air':  { n1: 2.42, n2: 1.00, th: 26 },
+        'crown-air':    { n1: 1.52, n2: 1.00, th: 42 },
+        'glass-water':  { n1: 1.50, n2: 1.33, th: 60 },
+        'sapphire-air': { n1: 1.77, n2: 1.00, th: 38 },
+      };
+      function applySolverExample(k) {
+        if (k === 'at-brewster') {
+          const n1 = parseFloat($('inp-sol-n1').value) || 1.5;
+          const n2 = parseFloat($('inp-sol-n2').value) || 1.0;
+          $('inp-sol-theta').value = MathX.deg(Math.atan(n2 / n1)).toFixed(1);
+          onParamChange();
+          return;
+        }
+        if (k === 'at-critical') {
+          const n1 = parseFloat($('inp-sol-n1').value) || 1.5;
+          const n2 = parseFloat($('inp-sol-n2').value) || 1.0;
+          const tc = MathX.criticalAngle(n1, n2);
+          if (tc != null) $('inp-sol-theta').value = MathX.deg(tc).toFixed(1);
+          onParamChange();
+          return;
+        }
+        const e = SOLVER_EXAMPLES[k]; if (!e) return;
+        $('inp-sol-n1').value = e.n1;
+        $('inp-sol-n2').value = e.n2;
+        $('inp-sol-theta').value = e.th;
+        onParamChange();
+      }
+
+      /* ==========================================================
+         CANVAS DRAG
+           • sandbox  → rotates incidence angle
+           • lens     → horizontal drag changes object distance o
+         ========================================================== */
+      function pointerToAngle(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+        const mx = (clientX - rect.left) * sx;
+        const my = (clientY - rect.top) * sy;
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        // angle measured from the downward normal (screen) — only the lower half is valid
+        let a = Math.atan2(mx - cx, cy - my) * 180 / Math.PI;
+        return MathX.clamp(a, 0, 89);
+      }
+      // lens drag: convert canvas x → object distance o (cm), using the same scale as the renderer
+      function pointerToObjectDist(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width;
+        const mx = (clientX - rect.left) * sx;
+        const w = canvas.width, h = canvas.height;
+        const cx = w / 2;
+        const fRaw = slider('slide-l-f');
+        const o = slider('slide-l-o');
+        const f = (state.lensType === 'concave') ? -fRaw : fRaw;
+        const worldRange = Math.max(o + Math.max((o * f) / (o - f), 0), 2 * Math.abs(f), 30) + 8;
+        const scale = (w * 0.46) / worldRange;
+        const oNew = (cx - mx) / scale;
+        return MathX.clamp(oNew, 2, 60);
+      }
+      function onPointerDown(e) {
+        if (state.mode === 'sandbox') {
+          state.dragging = true;
+          const p = e.touches ? e.touches[0] : e;
+          const a = pointerToAngle(p.clientX, p.clientY);
+          $('slide-s-theta').value = a.toFixed(1);
+          Tween.set('sandboxTheta', a);
+          onParamChange();
+        } else if (state.mode === 'lens') {
+          state.dragging = true;
+          const p = e.touches ? e.touches[0] : e;
+          $('slide-l-o').value = pointerToObjectDist(p.clientX).toFixed(1);
+          onParamChange();
+        }
+      }
+      function onPointerMove(e) {
+        if (!state.dragging) return;
+        const p = e.touches ? e.touches[0] : e;
+        if (state.mode === 'sandbox') {
+          const a = pointerToAngle(p.clientX, p.clientY);
+          $('slide-s-theta').value = a.toFixed(1);
+          Tween.to('sandboxTheta', a);
+          onParamChange();
+        } else if (state.mode === 'lens') {
+          $('slide-l-o').value = pointerToObjectDist(p.clientX).toFixed(1);
+          onParamChange();
+        }
+      }
+      function onPointerUp() { state.dragging = false; }
+
+      canvas.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      canvas.addEventListener('touchstart', e => { onPointerDown(e); }, { passive: true });
+      canvas.addEventListener('touchmove', e => { onPointerMove(e); e.preventDefault(); }, { passive: false });
+      canvas.addEventListener('touchend', onPointerUp);
+
+      /* ==========================================================
+         STEP PANEL renderer (shared by sandbox & solver)
+         Shows the full worked solution:
+           1. Given values
+           2. Critical angle  θc = sin⁻¹(n₂/n₁)
+           3. Snell's law     n₁sinθᵢ = n₂sinθₜ  → θₜ
+           4. Fresnel         Rₛ, Rₚ, R̄, T
+           5. Verdict         (TIR / partial / critical)
+         ========================================================== */
+      function renderSteps(n1, n2, thetaIdeg) {
+        const tc = MathX.criticalAngle(n1, n2);
+        const thetaI = MathX.rad(thetaIdeg);
+        const tir = tc != null && thetaI >= tc - 1e-6;
+        const atCrit = tc != null && Math.abs(thetaIdeg - MathX.deg(tc)) < 0.15;
+        const fr = MathX.fresnel(n1, n2, thetaI);
+
+        // Step 1 — given
+        $('step-1-body').innerHTML =
+          `n₁ = <b>${n1.toFixed(4)}</b> (denser),  n₂ = <b>${n2.toFixed(4)}</b> (rarer),  θᵢ = <b>${thetaIdeg.toFixed(2)}°</b>`;
+
+        if (tc == null) {
+          $('step-2-body').innerHTML = `θc = sin⁻¹(n₂/n₁) → <b>undefined</b> (n₁ ≤ n₂ ⟹ TIR impossible)`;
+          $('step-3-body').innerHTML = `n₁ ≤ n₂ ⇒ light always refracts toward the normal; no TIR at any angle.`;
+          $('step-4-body').innerHTML = `No TIR. Light refracts into medium 2 for every θᵢ.`;
+          $('step-4').className = 'step conclude-warn';
+          return;
+        }
+        const tcDeg = MathX.deg(tc);
+
+        // Step 2 — critical angle
+        $('step-2-body').innerHTML =
+          `θc = sin⁻¹(n₂/n₁) = sin⁻¹(${(n2 / n1).toFixed(4)}) = <b>${tcDeg.toFixed(2)}°</b>`;
+
+        // Step 3 — Snell's law → refracted angle θₜ
+        if (fr.thetaT == null || tir) {
+          $('step-3-body').innerHTML =
+            `n₁·sin(${thetaIdeg.toFixed(1)}°) = ${((n1) * Math.sin(thetaI)).toFixed(4)} &gt; n₂ = ${n2.toFixed(4)}
+             ⟹ sinθₜ &gt; 1 — <b>no real refracted ray</b>. TIR.`;
+        } else {
+          const ttDeg = MathX.deg(fr.thetaT);
+          $('step-3-body').innerHTML =
+            `n₁sinθᵢ = ${n1.toFixed(3)}·sin(${thetaIdeg.toFixed(1)}°) = ${((n1) * Math.sin(thetaI)).toFixed(4)}
+             = n₂sinθₜ ⟹ θₜ = sin⁻¹(${((n1 / n2) * Math.sin(thetaI)).toFixed(4)}) = <b>${ttDeg.toFixed(2)}°</b>`;
+        }
+
+        // Step 4 — Fresnel coefficients (Rs, Rp, average R, T)
+        if (tir) {
+          $('step-4-body').innerHTML =
+            `Fresnel: Rₛ = Rₚ = <b>1.000</b>, T = 0.000 ⟹ 100% reflected.`;
+        } else {
+          $('step-4-body').innerHTML =
+            `Fresnel: R̄ = <b>${(fr.R * 100).toFixed(2)}%</b>, T = <b>${(fr.T * 100).toFixed(2)}%</b>
+             (unpolarized average of Rs, Rp).`;
+        }
+
+        // Verdict (in step-4 styling)
+        if (atCrit) {
+          $('step-4-body').innerHTML += `  ⚠ TIR threshold — refracted ray grazes the surface (θₜ = 90°).`;
+          $('step-4').className = 'step conclude-warn';
+        } else if (tir) {
+          $('step-4-body').innerHTML += `  ✓ TOTAL INTERNAL REFLECTION. Evanescent wave penetrates n₂.`;
+          $('step-4').className = 'step conclude-ok';
+        } else {
+          $('step-4').className = 'step conclude-warn';
+        }
+      }
+
+      /* ==========================================================
+         MODE: SANDBOX  (update + render)
+         ========================================================== */
+      function sandboxUpdate() {
+        const wl = slider('slide-s-wave');
+        const n1 = dispersiveIndex('s-n1', wl, 'slide-s-n1');
+        const n2 = dispersiveIndex('s-n2', wl, 'slide-s-n2');
+        const thetaDeg = slider('slide-s-theta');
+        const theta = MathX.rad(thetaDeg);
+        const tc = MathX.criticalAngle(n1, n2);
+        const fr = MathX.fresnel(n1, n2, theta);
+
+        $('val-s-n1').textContent = n1.toFixed(3);
+        $('val-s-n2').textContent = n2.toFixed(3);
+        $('val-s-theta').textContent = thetaDeg.toFixed(1) + '°';
+        $('val-s-wave').textContent = wl + ' nm';
+
+        $('lbl-c-angle').textContent = 'Critical Angle (θc)';
+        $('lbl-angle-1').textContent = 'Incident Angle (θi)';
+        $('val-angle-1').textContent = thetaDeg.toFixed(2) + '°';
+        $('val-refl').textContent = (fr.R * 100).toFixed(2) + '%';
+        $('val-refr').textContent = (fr.T * 100).toFixed(2) + '%';
+
+        const badge = $('status-badge');
+        if (tc == null) {
+          badge.textContent = 'TIR impossible (n₁ ≤ n₂)';
+          badge.className = 'pill warn';
+          $('val-c-angle').textContent = 'N/A';
+          $('formula-title').textContent = "Snell's Law (no TIR possible)";
+          $('formula-eq').textContent = `${n1.toFixed(3)}·sin(${thetaDeg.toFixed(1)}°) = ${n2.toFixed(3)}·sin(θt)`;
+          $('formula-explanation').textContent =
+            `n₁ ≤ n₂ so light bends toward the normal; θt = ${MathX.deg(fr.thetaT || 0).toFixed(2)}°. TIR can never occur here.`;
+        } else {
+          const tcDeg = MathX.deg(tc);
+          $('val-c-angle').textContent = tcDeg.toFixed(2) + '°';
+          $('formula-title').textContent = "Critical angle & Snell's law";
+          $('formula-eq').textContent = `θc = sin⁻¹(${n2.toFixed(3)}/${n1.toFixed(3)}) = ${tcDeg.toFixed(2)}°`;
+          if (fr.tir) {
+            badge.textContent = 'TOTAL INTERNAL REFLECTION';
+            badge.className = 'pill ok';
+            $('formula-explanation').textContent =
+              `θi = ${thetaDeg.toFixed(1)}° ≥ θc = ${tcDeg.toFixed(2)}° ⇒ R=100%, refracted ray gone, evanescent field in n₂. (λ=${wl} nm shifts θc via dispersion.)`;
+          } else {
+            badge.textContent = 'Refracting';
+            badge.className = 'pill ok';
+            $('formula-explanation').textContent =
+              `θt = ${MathX.deg(fr.thetaT).toFixed(2)}°, R = ${(fr.R * 100).toFixed(1)}%, T = ${(fr.T * 100).toFixed(1)}%. Raise θi toward ${tcDeg.toFixed(1)}° to reach TIR.`;
+          }
+        }
+        renderSteps(n1, n2, thetaDeg);
+        return { n1, n2, theta, tc, fr, wl };
+      }
+
+      function sandboxRender(P, w, h, theme) {
+        const { n1, n2, theta, tc, fr, wl } = P;
+        const yB = h / 2, cx = w / 2;
+        const rayColor = Draw.wavelengthRGBA(wl, 1);
+
+        // Backgrounds — pseudo-3D tilted slabs
+        Draw.tiltedSlab(0, 0, w, yB, theme === 'dark' ? 'rgba(31,41,55,0.20)' : 'rgba(255,255,255,0.55)', theme);
+        Draw.tiltedSlab(0, yB, w, yB, theme === 'dark' ? 'rgba(59,130,246,0.10)' : 'rgba(37,99,235,0.06)', theme);
+
+        // Interface line
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(15,23,42,0.35)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(0, yB); ctx.lineTo(w, yB); ctx.stroke();
+
+        // Normal (vertical)
+        Draw.normal(cx, yB, 0, 1, 150, theme);
+        Draw.label(cx + 6, 46, 'Normal', theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(15,23,42,0.6)', 11);
+
+        // Medium labels
+        Draw.label(20, 30, `RARER medium  n₂ = ${n2.toFixed(3)}`,
+          theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 13);
+        Draw.label(20, h - 18, `DENSER medium  n₁ = ${n1.toFixed(3)}`,
+          theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 13);
+        Draw.label(w - 120, yB - 8, 'Interface', 'rgba(236,72,153,0.8)', 11);
+
+        const R = 200;
+        // Incident: from lower-LEFT to centre  (θ measured from normal)
+        const lx = cx - R * Math.sin(theta);
+        const ly = yB + R * Math.cos(theta);
+        Draw.glowRay(lx, ly, cx, yB, rayColor, 1.0);
+        Draw.label((lx + cx) / 2 - 64, (ly + yB) / 2 + 16, 'Incident ray', rayColor, 12);
+
+        // Reflected: centre to lower-RIGHT
+        const rx = cx + R * Math.sin(theta);
+        const ry = yB + R * Math.cos(theta);
+        Draw.glowRay(cx, yB, rx, ry, rayColor, fr.R);
+        Draw.label((cx + rx) / 2 + 6, (yB + ry) / 2 + 16, `Reflected R=${(fr.R * 100).toFixed(0)}%`, rayColor, 12);
+
+        const down = { x: 0, y: 1 };
+        // Incident arc (blue) between normal-down and incident-incoming (-sin,cos)
+        Draw.angleArc({ x: cx, y: yB }, down, { x: -Math.sin(theta), y: Math.cos(theta) },
+          42, '#3b82f6', `θi=${MathX.deg(theta).toFixed(1)}°`, theme);
+
+        if (fr.tir || fr.thetaT == null) {
+          // Evanescent wave in upper medium
+          drawEvanescent(cx, yB, rayColor, n1, n2, theta);
+          // Critical-angle reference arc (green) — only meaningful when TIR possible
+          if (tc != null) {
+            Draw.angleArc({ x: cx, y: yB }, { x: 0, y: -1 }, { x: Math.sin(tc), y: -Math.cos(tc) },
+              60, '#10b981', `θc=${MathX.deg(tc).toFixed(1)}°`, theme);
+          }
+          // TIR badge flash on canvas
+          Draw.label(cx - 70, yB - 80, '⭐ TIR — all light reflected', '#10b981', 13);
+        } else {
+          // Refracted ray exits to UPPER-RIGHT  (sign fix: +sin)
+          const rfx = cx + R * Math.sin(fr.thetaT);
+          const rfy = yB - R * Math.cos(fr.thetaT);
+          Draw.glowRay(cx, yB, rfx, rfy, rayColor, fr.T);
+          Draw.label((cx + rfx) / 2 + 6, (yB + rfy) / 2 - 4, `Refracted T=${(fr.T * 100).toFixed(0)}%`, rayColor, 12);
+          // Refraction arc (pink) between normal-up and refracted (sin,-cos)
+          Draw.angleArc({ x: cx, y: yB }, { x: 0, y: -1 }, { x: Math.sin(fr.thetaT), y: -Math.cos(fr.thetaT) },
+            42, '#ec4899', `θt=${MathX.deg(fr.thetaT).toFixed(1)}°`, theme);
+          // Critical-angle reference arc (green dashed)
+          if (tc != null) {
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            Draw.angleArc({ x: cx, y: yB }, { x: 0, y: -1 }, { x: Math.sin(tc), y: -Math.cos(tc) },
+              64, '#10b981', null, theme);
+            ctx.restore();
+            Draw.label(cx + 70, yB - 70, `θc=${MathX.deg(tc).toFixed(1)}°`, '#10b981', 11);
+          }
+        }
+
+        // Laser pointer body
+        drawLaserPointer(lx, ly, theta, rayColor);
+      }
+
+      function drawEvanescent(cx, yB, color, n1, n2, theta) {
+        const sinI = Math.sin(theta);
+        const arg = n1 * n1 * sinI * sinI - n2 * n2;
+        if (arg <= 0) return;
+        const alpha = 0.05 * Math.sqrt(arg);
+        ctx.lineWidth = 1;
+        for (let dy = 2; dy <= 26; dy += 4) {
+          const decay = Math.exp(-dy * alpha);
+          ctx.strokeStyle = Draw.withAlpha(color, 0.55 * decay);
+          ctx.beginPath();
+          let first = true;
+          for (let dx = -160; dx <= 160; dx += 3) {
+            const x = cx + dx;
+            const y = yB - dy + Math.sin(dx * 0.2 - state.waveOffset * 1.5) * 3 * decay;
+            if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      function drawLaserPointer(x, y, theta, rayColor) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-theta);
+        const g = ctx.createLinearGradient(-12, 0, 12, 0);
+        g.addColorStop(0, '#475569'); g.addColorStop(0.5, '#cbd5e1'); g.addColorStop(1, '#334155');
+        ctx.fillStyle = g; ctx.fillRect(-12, 0, 24, 46);
+        ctx.fillStyle = '#d97706'; ctx.fillRect(-11, 8, 22, 5);
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(-10, -10, 20, 10);
+        ctx.fillStyle = rayColor; ctx.beginPath(); ctx.arc(0, 28, 3.2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1; ctx.strokeRect(-12, 0, 24, 46);
+        ctx.restore();
+      }
+
+      /* ==========================================================
+         MODE: OPTICAL FIBER
+         ========================================================== */
+      function fiberSpline(curve, w, h) {
+        const width = 60;
+        const top = [], bot = [], ctr = [];
+        for (let x = 40; x <= w - 40; x += 6) {
+          const t = (x - 40) / (w - 80);
+          const y = h / 2 + curve * 70 * Math.sin(Math.PI * t);
+          const dx = 0.2;
+          const y1 = h / 2 + curve * 70 * Math.sin(Math.PI * ((x - dx - 40) / (w - 80)));
+          const y2 = h / 2 + curve * 70 * Math.sin(Math.PI * ((x + dx - 40) / (w - 80)));
+          const dy = (y2 - y1) / (2 * dx);
+          const len = Math.hypot(1, dy);
+          const nx = -dy / len, ny = 1 / len;
+          top.push({ x: x + width / 2 * nx, y: y + width / 2 * ny });
+          bot.push({ x: x - width / 2 * nx, y: y - width / 2 * ny });
+          ctr.push({ x, y });
+        }
+        return { top, bot, ctr };
+      }
+
+      function fiberUpdate() {
+        const wl = slider('slide-f-wave');
+        const ncore = dispersiveIndex('f-core', wl, 'slide-f-ncore');
+        const nclad = dispersiveIndex('f-clad', wl, 'slide-f-nclad');
+        const curve = slider('slide-f-curve');
+        const inj = slider('slide-f-inject');
+
+        $('val-f-ncore').textContent = ncore.toFixed(3);
+        $('val-f-nclad').textContent = nclad.toFixed(3);
+        $('val-f-curve').textContent = curve.toFixed(2);
+        $('val-f-inject').textContent = inj.toFixed(1) + '°';
+        $('val-f-wave').textContent = wl + ' nm';
+
+        const tc = MathX.criticalAngle(ncore, nclad);
+        $('lbl-c-angle').textContent = 'Core–Clad θc';
+        $('val-c-angle').textContent = tc == null ? 'N/A' : MathX.deg(tc).toFixed(2) + '°';
+        $('lbl-angle-1').textContent = 'Entry angle θ₀';
+        $('val-angle-1').textContent = inj.toFixed(2) + '°';
+        // NA & acceptance angle (only meaningful when guiding)
+        if (tc != null) {
+          const NA = Math.sqrt(Math.max(0, ncore * ncore - nclad * nclad));
+          const acc = Math.asin(MathX.clamp(NA, 0, 1)) * 180 / Math.PI;
+          $('val-refl').textContent = acc.toFixed(2) + '°';
+          $('lbl-card-refl').textContent = 'Acceptance θa';
+          $('val-refr').textContent = NA.toFixed(3);
+          $('lbl-card-refr').textContent = 'Numerical Aperture';
+        } else {
+          $('val-refl').textContent = 'N/A'; $('val-refr').textContent = 'N/A';
+        }
+
+        const badge = $('status-badge');
+        if (tc == null) {
+          badge.textContent = 'No guiding (n_core ≤ n_clad)'; badge.className = 'pill warn';
+          $('formula-title').textContent = 'Waveguide condition violated';
+          $('formula-eq').textContent = 'n_core > n_clad  required';
+          $('formula-explanation').textContent = 'With n_core ≤ n_clad there is no critical angle, so TIR cannot trap light — every ray leaks out immediately.';
+        } else {
+          badge.textContent = 'Guiding (bends may leak)'; badge.className = 'pill ok';
+          $('formula-title').textContent = 'Fiber: critical angle & NA';
+          $('formula-eq').textContent = `θc=sin⁻¹(${nclad.toFixed(3)}/${ncore.toFixed(3)})=${MathX.deg(tc).toFixed(2)}°, NA=√(n_core²−n_clad²)`;
+          $('formula-explanation').textContent =
+            `Light bounces by TIR if its angle on the wall exceeds θc=${MathX.deg(tc).toFixed(1)}°. Bend the fiber (curvature) and the wall angle shrinks; once below θc the ray refracts out as leakage (orange). NA=${(Math.sqrt(Math.max(0, ncore * ncore - nclad * nclad))).toFixed(3)}.`;
+        }
+        return { ncore, nclad, tc, curve, inj, wl };
+      }
+
+      function fiberRender(P, w, h, theme) {
+        const { ncore, nclad, tc, curve, inj, wl } = P;
+        const rayColor = Draw.wavelengthRGBA(wl, 1);
+        const { top, bot, ctr } = fiberSpline(curve, w, h);
+
+        // cladding background
+        ctx.fillStyle = theme === 'dark' ? 'rgba(15,23,42,0.55)' : 'rgba(241,245,249,0.9)';
+        ctx.fillRect(0, 0, w, h);
+        // cladding labels
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.5)';
+        ctx.font = "bold 12.5px 'Outfit'";
+        ctx.fillText(`CLADDING  n_clad = ${nclad.toFixed(3)}`, 50, 60);
+        ctx.fillText(`CLADDING  n_clad = ${nclad.toFixed(3)}`, 50, h - 44);
+
+        // core fill
+        ctx.beginPath();
+        ctx.moveTo(top[0].x, top[0].y);
+        for (let i = 1; i < top.length; i++) ctx.lineTo(top[i].x, top[i].y);
+        for (let i = bot.length - 1; i >= 0; i--) ctx.lineTo(bot[i].x, bot[i].y);
+        ctx.closePath();
+        const cg = ctx.createLinearGradient(0, h / 2 - 40, 0, h / 2 + 40);
+        cg.addColorStop(0, 'rgba(59,130,246,0.18)');
+        cg.addColorStop(0.5, 'rgba(59,130,246,0.05)');
+        cg.addColorStop(1, 'rgba(59,130,246,0.18)');
+        ctx.fillStyle = cg; ctx.fill();
+        // boundaries
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(15,23,42,0.3)';
+        ctx.lineWidth = 1.5;
+        for (const arr of [top, bot]) {
+          ctx.beginPath(); ctx.moveTo(arr[0].x, arr[0].y);
+          for (let i = 1; i < arr.length; i++) ctx.lineTo(arr[i].x, arr[i].y);
+          ctx.stroke();
+        }
+        // CORE label
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.8)';
+        ctx.font = "bold 13px 'Outfit'";
+        const mid = ctr[ctr.length >> 1];
+        ctx.fillText(`CORE  n_core = ${ncore.toFixed(3)}`, w / 2 - 80, mid.y - 8);
+
+        // ---- ray trace ----
+        const startX = ctr[0].x;
+        const startY = ctr[0].y;
+        const tang = Math.atan2(ctr[1].y - ctr[0].y, ctr[1].x - ctr[0].x);
+        const rayAng = tang + MathX.rad(inj);
+        let p = { x: startX, y: startY };
+        let v = { x: Math.cos(rayAng), y: Math.sin(rayAng) };
+        let I = 1.0;
+        // laser body
+        const nx = startX - 40 * Math.cos(rayAng), ny = startY - 40 * Math.sin(rayAng);
+        Draw.glowRay(nx, ny, startX, startY, rayColor, 1);
+        ctx.save(); ctx.translate(nx, ny); ctx.rotate(rayAng);
+        const lg = ctx.createLinearGradient(-35, 0, 0, 0);
+        lg.addColorStop(0, '#334155'); lg.addColorStop(0.6, '#94a3b8'); lg.addColorStop(1, '#1e293b');
+        ctx.fillStyle = lg; ctx.fillRect(-35, -12, 35, 24);
+        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1; ctx.strokeRect(-35, -12, 35, 24);
+        ctx.restore();
+
+        let leakage = false;
+        for (let bounce = 0; bounce < 30 && I > 0.02; bounce++) {
+          const end = { x: p.x + 900 * v.x, y: p.y + 900 * v.y };
+          let best = null, isTop = false, idx = -1;
+          for (let i = 0; i < top.length - 1; i++) {
+            const ht = MathX.intersect(p, end, top[i], top[i + 1]);
+            if (ht && ht.t > 0.004 && (!best || ht.t < best.t)) { best = ht; isTop = true; idx = i; }
+            const hb = MathX.intersect(p, end, bot[i], bot[i + 1]);
+            if (hb && hb.t > 0.004 && (!best || hb.t < best.t)) { best = hb; isTop = false; idx = i; }
+          }
+          if (!best) { Draw.glowRay(p.x, p.y, p.x + v.x * 220, p.y + v.y * 220, rayColor, I); break; }
+          // outward normal of hit segment
+          const arr = isTop ? top : bot;
+          const A = arr[idx], B = arr[idx + 1];
+          const ex = B.x - A.x, ey = B.y - A.y;
+          // outward normal: rotate edge 90° away from core center → use sign test
+          let N = { x: ey, y: -ex };
+          const nlen = Math.hypot(N.x, N.y); N.x /= nlen; N.y /= nlen;
+          // ensure outward: vector from center spline point to hit should agree with N
+          const c = ctr[idx];
+          const outward = { x: best.x - c.x, y: best.y - c.y };
+          if (N.x * outward.x + N.y * outward.y < 0) { N.x = -N.x; N.y = -N.y; }
+
+          Draw.glowRay(p.x, p.y, best.x, best.y, rayColor, I);
+
+          if (tc == null) {
+            // no guiding
+            const leak = MathX.refract(v, N, ncore, nclad) || v;
+            Draw.glowRay(best.x, best.y, best.x + 60 * leak.x, best.y + 60 * leak.y, '#f59e0b', I);
+            Draw.marker(best.x, best.y, '#f59e0b');
+            break;
+          }
+          const cosI = Math.abs(v.x * N.x + v.y * N.y);
+          const thetaI = Math.acos(MathX.clamp(cosI, -1, 1));
+          if (thetaI >= tc - 1e-6) {
+            // TIR
+            v = MathX.reflect(v, N);
+            p = { x: best.x, y: best.y };
+            Draw.marker(best.x, best.y, '#10b981', 3);
+            I *= 0.995;
+          } else {
+            // partial → leak
+            leakage = true;
+            const fr = MathX.fresnel(ncore, nclad, thetaI);
+            const leak = MathX.refract(v, N, ncore, nclad);
+            if (leak) {
+              Draw.glowRay(best.x, best.y, best.x + 55 * leak.x, best.y + 55 * leak.y, '#f59e0b', (1 - fr.R) * I);
+            }
+            Draw.marker(best.x, best.y, '#f59e0b');
+            v = MathX.reflect(v, N);
+            p = { x: best.x, y: best.y };
+            I *= fr.R;
+          }
+        }
+        if (leakage) {
+          Draw.label(w - 220, 40, '⚠ Leakage — bend/Δn too small for TIR', '#f59e0b', 13);
+        }
+      }
+
+      /* ==========================================================
+         MODE: PRISM
+         ========================================================== */
+      function prismUpdate() {
+        const wl = slider('slide-p-wave');
+        const ng = dispersiveIndex('p-glass', wl, 'slide-p-nglass');
+        const apex = slider('slide-p-apex');
+        const inc = slider('slide-p-inc');
+        const rot = slider('slide-p-rot');
+        const beams = parseInt($('slide-p-beams').value);
+
+        $('val-p-nglass').textContent = ng.toFixed(3);
+        $('val-p-apex').textContent = apex.toFixed(1) + '°';
+        $('val-p-inc').textContent = inc.toFixed(1) + '°';
+        $('val-p-rot').textContent = rot.toFixed(0) + '°';
+        $('val-p-beams').textContent = beams;
+        $('val-p-wave').textContent = wl + ' nm';
+
+        const tc = MathX.criticalAngle(ng, 1.0);
+        $('lbl-c-angle').textContent = 'Glass θc (glass→air)';
+        $('val-c-angle').textContent = tc == null ? 'N/A' : MathX.deg(tc).toFixed(2) + '°';
+        $('lbl-angle-1').textContent = 'Apex angle A';
+        $('val-angle-1').textContent = apex.toFixed(2) + '°';
+
+        // deviation (equilateral/isosceles, single-pass thin estimate) D = θi + θt - A
+        const t1 = MathX.rad(inc);
+        const sint2 = Math.sin(t1) / ng;
+        const t2 = Math.abs(sint2) <= 1 ? Math.asin(sint2) : null;
+        const D = t2 != null ? MathX.deg(t1) + MathX.deg(t2) - apex : NaN;
+        $('lbl-card-refl').textContent = 'Deviation D';
+        $('val-refl').textContent = isNaN(D) ? '—' : D.toFixed(2) + '°';
+        $('lbl-card-refr').textContent = 'TIR @ hypotenuse?';
+        if (state.prismType === 'right' || state.prismType === 'porro') {
+          $('val-refr').textContent = (ng >= 1.414) ? 'YES (45°≥θc)' : 'NO (leak)';
+        } else {
+          $('val-refr').textContent = 'dispersive';
+        }
+
+        const badge = $('status-badge');
+        $('formula-title').textContent = 'Prism optics';
+        if (state.prismType === 'right' || state.prismType === 'porro') {
+          const need = Math.SQRT2; // 1/√2 inverse → n≥√2 for 45° TIR
+          if (ng >= need) {
+            badge.textContent = 'TIR at hypotenuse ✓'; badge.className = 'pill ok';
+            $('formula-eq').textContent = `θc=sin⁻¹(1/${ng.toFixed(3)})=${tc ? MathX.deg(tc).toFixed(1) : '?'}° < 45° ⇒ TIR`;
+            $('formula-explanation').textContent = state.prismType === 'right'
+              ? 'Right-angle prism: light enters a leg, hits the hypotenuse at 45° (> θc) → TIR → exits the other leg, deviated by 90°.'
+              : 'Porro prism: two TIRs on the legs return the beam by 180° (retroreflection), inverting the image.';
+          } else {
+            badge.textContent = 'n too low — light leaks'; badge.className = 'pill warn';
+            $('formula-eq').textContent = `θc=${tc ? MathX.deg(tc).toFixed(1) : '?'}° > 45° ⇒ no TIR`;
+            $('formula-explanation').textContent = 'n < √2 ≈ 1.414 makes θc exceed 45°, so the hypotenuse cannot totally reflect; rays refract out.';
+          }
+        } else {
+          badge.textContent = 'Dispersive refraction'; badge.className = 'pill ok';
+          $('formula-eq').textContent = `D = θ₁ + θ₂ − A = ${isNaN(D) ? '—' : D.toFixed(1) + '°'}`;
+          $('formula-explanation').textContent = 'An equilateral/isosceles prism splits white light because n(λ) falls with λ (Cauchy): violet bends most, red least.';
+        }
+        return { ng, apex, inc, rot, beams, wl, tc };
+      }
+
+      // Build polygon for current prism type
+      function prismPolygon(type, w, h, apexDeg) {
+        const cx = w / 2, cy = h / 2 + 10;
+        if (type === 'right') {
+          // right-angle, hypotenuse facing left, legs meeting at right corner on the right
+          const s = 260;
+          return [
+            { x: cx - s * 0.5, y: cy - s * 0.5 }, // top
+            { x: cx - s * 0.5, y: cy + s * 0.5 }, // bottom-left  (vertical leg)
+            { x: cx + s * 0.5, y: cy + s * 0.5 }, // bottom-right (90° corner)
+          ];
+        }
+        if (type === 'porro') {
+          const s = 250;
+          return [
+            { x: cx - s * 0.5, y: cy - s * 0.5 },
+            { x: cx - s * 0.5, y: cy + s * 0.5 },
+            { x: cx + s * 0.5, y: cy + s * 0.5 },
+          ];
+        }
+        // equi / iso: apex at top
+        const A = MathX.rad(apexDeg);
+        const baseHalf = 150;
+        const height = baseHalf / Math.tan(A / 2);
+        return [
+          { x: cx, y: cy - height * 0.6 },            // apex
+          { x: cx + baseHalf, y: cy + height * 0.4 }, // br
+          { x: cx - baseHalf, y: cy + height * 0.4 }, // bl
+        ];
+      }
+
+      // polygon centroid (for robust outward-normal test)
+      function polyCentroid(poly) {
+        let cx = 0, cy = 0;
+        for (const p of poly) { cx += p.x; cy += p.y; }
+        return { x: cx / poly.length, y: cy / poly.length };
+      }
+      // outward normal of edge i — winding-robust (uses centroid sign test)
+      function edgeOutwardNormal(poly, i) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        const ex = b.x - a.x, ey = b.y - a.y;
+        const nlen = Math.hypot(ex, ey) || 1;
+        // candidate normal (rotate edge +90°)
+        let nx = ey / nlen, ny = -ex / nlen;
+        // edge midpoint → must point AWAY from centroid to be outward
+        const c = polyCentroid(poly);
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        if ((mx - c.x) * nx + (my - c.y) * ny < 0) { nx = -nx; ny = -ny; }
+        return { x: nx, y: ny, a, b };
+      }
+
+      // rotate a polygon about the canvas centre by angle (degrees)
+      function rotatePoly(poly, deg, w, h) {
+        const a = MathX.rad(deg);
+        const c = Math.cos(a), s = Math.sin(a);
+        const cx = w / 2, cy = h / 2;
+        return poly.map(p => {
+          const dx = p.x - cx, dy = p.y - cy;
+          return { x: cx + dx * c - dy * s, y: cy + dx * s + dy * c };
+        });
+      }
+
+      function prismRender(P, w, h, theme) {
+        const { ng, apex, inc, rot, beams, wl, tc } = P;
+        // base polygon, then rotate the PRISM (beam stays horizontal & fixed)
+        const basePoly = prismPolygon(state.prismType, w, h, apex);
+        const poly = rotatePoly(basePoly, rot, w, h);
+        const centroid = polyCentroid(poly);
+
+        // background
+        ctx.fillStyle = theme === 'dark' ? 'rgba(15,23,42,0.5)' : 'rgba(241,245,249,0.9)';
+        ctx.fillRect(0, 0, w, h);
+
+        // glass body with bevel highlight (pseudo-3D)
+        ctx.beginPath();
+        ctx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+        ctx.closePath();
+        const gg = ctx.createLinearGradient(w / 2 - 150, h / 2 - 150, w / 2 + 150, h / 2 + 150);
+        if (theme === 'dark') {
+          gg.addColorStop(0, 'rgba(139,92,246,0.18)');
+          gg.addColorStop(0.5, 'rgba(59,130,246,0.06)');
+          gg.addColorStop(1, 'rgba(6,182,212,0.18)');
+        } else {
+          gg.addColorStop(0, 'rgba(124,58,237,0.12)');
+          gg.addColorStop(1, 'rgba(8,145,178,0.12)');
+        }
+        ctx.fillStyle = gg; ctx.fill();
+        // bevel
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(15,23,42,0.25)';
+        ctx.lineWidth = 3; ctx.stroke();
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(15,23,42,0.1)';
+        ctx.lineWidth = 1; ctx.stroke();
+
+        Draw.label(w / 2 - 60, h - 24, `n_glass = ${ng.toFixed(3)}   (λ=${wl} nm)`,
+          theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 12);
+
+        // choose wavelengths to render (dispersion)
+        let wavelengths;
+        if (state.prismType === 'equi' || state.prismType === 'iso') {
+          wavelengths = [420, 470, 530, 580, 620, 680];
+        } else {
+          wavelengths = beams > 1 ? [wl - 30, wl - 10, wl, wl + 10, wl + 30, wl + 50].slice(0, beams) : [wl];
+        }
+
+        // ---------- UNIFIED BEAM: horizontal, fixed, aimed at prism centre ----------
+        // The prism is what rotates (slide-p-rot); the laser never moves. This makes
+        // the incidence angle emerge from pure geometry (physically correct) and lets
+        // you study refraction at literally any face orientation.
+        const beamDir = { x: 1, y: 0 };                    // always points +x (rightward)
+        const beamCx = 40;                                 // laser x-position (left edge)
+        // vertical centre of the beam fan = prism centroid y, so rotation keeps it on target
+        const beamY = centroid.y;
+        for (let k = 0; k < wavelengths.length; k++) {
+          const yOff = (k - (wavelengths.length - 1) / 2) * 16;
+          tracePrismRay(poly, { x: beamCx, y: beamY + yOff }, beamDir, wavelengths[k], ng, tc, theme, wl);
+        }
+        // laser body (fixed on the left)
+        ctx.save();
+        ctx.fillStyle = theme === 'dark' ? '#1e293b' : '#64748b';
+        ctx.fillRect(beamCx - 34, beamY - 16 - (wavelengths.length - 1) * 8, 30, 32 + (wavelengths.length - 1) * 16);
+        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1;
+        ctx.strokeRect(beamCx - 34, beamY - 16 - (wavelengths.length - 1) * 8, 30, 32 + (wavelengths.length - 1) * 16);
+        ctx.restore();
+        // laser label
+        Draw.label(beamCx - 34, beamY - 22 - (wavelengths.length - 1) * 8, 'laser →',
+          theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(15,23,42,0.6)', 11);
+        // rotation readout on canvas
+        Draw.label(w - 130, 28, `rotation: ${rot.toFixed(0)}°`,
+          theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(15,23,42,0.6)', 12);
+      }
+
+      // Trace one ray through the prism polygon (air → glass → … → air).
+      // Uses proper Snell refraction + Fresnel R/T at every face. TIR inside the
+      // glass reflects fully; on exit-to-air, the reflected part keeps bouncing
+      // (carrying intensity R·I) until it finds another face or fades out.
+      // At the first entry, draws the surface normal + incidence-angle arc so you
+      // can SEE the ray bend toward the normal (entering denser glass).
+      function tracePrismRay(poly, start, dir, rayWl, ngBase, tc, theme, refWl) {
+        // dispersive index for this colour (use p-glass B)
+        const ab = state.matAB['p-glass'] || { A: ngBase, B: 0 };
+        const lamMu = rayWl * 1e-3, lamD = 0.589;
+        const ng = ngBase + ab.B * (1 / (lamMu * lamMu) - 1 / (lamD * lamD));
+        const color = Draw.wavelengthRGBA(rayWl, 1);
+
+        let p = { x: start.x, y: start.y };
+        let v = { x: dir.x, y: dir.y };
+        const vl = Math.hypot(v.x, v.y) || 1; v.x /= vl; v.y /= vl;
+        let inside = false;
+        let I = 1.0;
+        let bounces = 0;
+        let drawnEntryNormal = false;
+
+        while (I > 0.02 && bounces < 12) {
+          bounces++;
+          const end = { x: p.x + v.x * 1400, y: p.y + v.y * 1400 };
+          let best = null, idx = -1;
+          for (let i = 0; i < poly.length; i++) {
+            const a = poly[i], b = poly[(i + 1) % poly.length];
+            const hit = MathX.intersect(p, end, a, b);
+            if (hit && hit.t > 0.01 && (!best || hit.t < best.t)) { best = hit; idx = i; }
+          }
+          if (!best) { Draw.glowRay(p.x, p.y, end.x, end.y, color, I); break; }
+          const N = edgeOutwardNormal(poly, idx);
+          Draw.glowRay(p.x, p.y, best.x, best.y, color, I);
+
+          const n_in  = inside ? ng : 1.0;
+          const n_out = inside ? 1.0 : ng;
+          const cosI  = Math.abs(v.x * N.x + v.y * N.y);
+          const thetaI = Math.acos(MathX.clamp(cosI, -1, 1));
+          const localTc = inside ? MathX.criticalAngle(ng, 1.0) : null;
+
+          if (inside && localTc != null && thetaI >= localTc - 1e-6) {
+            // Total Internal Reflection inside the prism
+            v = MathX.reflect(v, N);
+            p = { x: best.x + v.x * 0.5, y: best.y + v.y * 0.5 };
+            Draw.marker(best.x, best.y, '#10b981', 4);
+            Draw.label(best.x + 8, best.y - 8, 'TIR', '#10b981', 10);
+            I *= 0.995;
+          } else {
+            const refr = MathX.refract(v, N, n_in, n_out);
+            const fr = MathX.fresnel(n_in, n_out, thetaI);
+            if (!refr) {
+              // safety: should not happen here (handled by TIR branch), but reflect if it does
+              v = MathX.reflect(v, N);
+              p = { x: best.x + v.x * 0.5, y: best.y + v.y * 0.5 };
+              continue;
+            }
+            if (!inside) {
+              // entering glass — take refracted direction, nudge inside
+              if (!drawnEntryNormal) {
+                // draw surface normal (dashed) through the entry point
+                Draw.normal(best.x, best.y, N.x, N.y, 46, theme);
+                // incidence-angle arc between -v (incoming) and the normal
+                const incoming = { x: -v.x, y: -v.y };
+                Draw.angleArc({ x: best.x, y: best.y }, N, incoming,
+                  30, '#3b82f6', `θ₁=${MathX.deg(thetaI).toFixed(0)}°`, theme);
+                // refraction-angle arc between refracted dir and -normal (inside)
+                const negN = { x: -N.x, y: -N.y };
+                const thetaR = Math.acos(MathX.clamp(
+                  -(refr.x * negN.x + refr.y * negN.y), -1, 1));
+                Draw.angleArc({ x: best.x, y: best.y }, negN, refr,
+                  24, '#ec4899', `θ₂=${MathX.deg(thetaR).toFixed(0)}°`, theme);
+                drawnEntryNormal = true;
+              }
+              v = refr; inside = true;
+              p = { x: best.x + v.x * 0.5, y: best.y + v.y * 0.5 };
+            } else {
+              // exiting to air: transmitted ray leaves (T·I), reflected part (R·I) keeps bouncing
+              Draw.glowRay(best.x, best.y,
+                best.x + 240 * refr.x, best.y + 240 * refr.y, color, fr.T * I);
+              Draw.marker(best.x, best.y, '#ec4899', 3);
+              if (fr.R > 0.05) {
+                // continue internally with the reflected energy
+                v = MathX.reflect(v, N);
+                p = { x: best.x + v.x * 0.5, y: best.y + v.y * 0.5 };
+                I *= fr.R;
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      /* ==========================================================
+         MODE: MIRAGE (graded index, inferior + superior)
+         Uses conserved invariant  n(y)·cosφ = const  (Snell layer model)
+         ========================================================== */
+      function mirageUpdate() {
+        const grad = slider('slide-m-grad');
+        const theta = slider('slide-m-theta');
+        const height = slider('slide-m-height');
+        const wl = slider('slide-m-wave');
+        $('val-m-grad').textContent = grad.toFixed(3);
+        $('val-m-theta').textContent = theta.toFixed(1) + '°';
+        $('val-m-height').textContent = height.toFixed(2) + '×';
+        $('val-m-wave').textContent = wl + ' nm';
+
+        const inferior = state.mirageType === 'inferior';
+        // n at observer height (top) and at ground
+        const nTop = 1.000 + (inferior ? grad : 0);
+        const nGround = 1.000 + (inferior ? 0 : grad);
+        $('lbl-c-angle').textContent = 'n at observer';
+        $('val-c-angle').textContent = nTop.toFixed(4);
+        $('lbl-angle-1').textContent = 'n at surface';
+        $('val-angle-1').textContent = nGround.toFixed(4);
+        $('lbl-card-refl').textContent = 'Δn (contrast)';
+        $('val-refl').textContent = Math.abs(nTop - nGround).toFixed(4);
+        $('lbl-card-refr').textContent = 'Mirage type';
+        $('val-refr').textContent = inferior ? 'Inferior' : 'Superior';
+
+        const badge = $('status-badge');
+        badge.textContent = inferior ? 'Inferior mirage' : 'Superior mirage';
+        badge.className = 'pill ok';
+        $('formula-title').textContent = 'Graded-index atmosphere';
+        $('formula-eq').textContent = `n(y)·cosφ = const   (Snell's law for layers)`;
+        $('formula-explanation').textContent = inferior
+          ? 'Hot ground ⇒ lowest n at the road. A downward sky ray bends away from the normal each layer until it exceeds the critical angle and TIR-climbs to the eye — the "wet road" virtual image is below the surface.'
+          : 'Cold surface / warm air aloft (inversion) ⇒ n is highest near the ground. Downward rays bend toward the normal and can curve downward over the horizon, lifting distant objects into a "superior" image above them.';
+        return { grad, theta, height, wl, nTop, nGround, inferior };
+      }
+
+      function mirageRender(P, w, h, theme) {
+        const { grad, theta, height, wl, nTop, nGround, inferior } = P;
+        const rayColor = Draw.wavelengthRGBA(wl, 1);
+        const yGround = h - 80;
+        const yTop = 70;
+        const atmosH = (yGround - yTop) * height;
+
+        // sky gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, yGround);
+        if (inferior) {
+          if (theme === 'dark') { sky.addColorStop(0, '#0b1e3a'); sky.addColorStop(1, '#3a2a12'); }
+          else { sky.addColorStop(0, '#7dd3fc'); sky.addColorStop(1, '#fed7aa'); }
+        } else {
+          if (theme === 'dark') { sky.addColorStop(0, '#020617'); sky.addColorStop(1, '#1e293b'); }
+          else { sky.addColorStop(0, '#bae6fd'); sky.addColorStop(1, '#e0f2fe'); }
+        }
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, yGround);
+        // ground
+        const ground = ctx.createLinearGradient(0, yGround, 0, h);
+        if (inferior) {
+          ground.addColorStop(0, theme === 'dark' ? '#7c2d12' : '#f59e0b'); ground.addColorStop(1, theme === 'dark' ? '#431407' : '#b45309');
+        } else {
+          ground.addColorStop(0, theme === 'dark' ? '#0e7490' : '#67e8f9'); ground.addColorStop(1, theme === 'dark' ? '#083344' : '#a5f3fc');
+        }
+        ctx.fillStyle = ground; ctx.fillRect(0, yGround, w, h - yGround);
+
+        // layered atmosphere bands (visualize n gradient)
+        const bands = 10;
+        for (let i = 0; i < bands; i++) {
+          const t = i / bands;
+          const yy = yGround - atmosH + t * atmosH;
+          const bandH = atmosH / bands;
+          const nIndexHere = inferior ? (nGround + (nTop - nGround) * t) : (nGround + (nTop - nGround) * (1 - t));
+          const alpha = 0.05 + 0.10 * Math.abs(nIndexHere - 1.0) / Math.max(1e-4, grad);
+          ctx.fillStyle = inferior
+            ? `rgba(245,158,11,${alpha})`
+            : `rgba(14,165,233,${alpha})`;
+          ctx.fillRect(0, yy, w, bandH);
+        }
+        // heat shimmer for inferior
+        if (inferior) {
+          ctx.strokeStyle = 'rgba(245,158,11,0.25)'; ctx.lineWidth = 1;
+          for (let r = 0; r < 3; r++) {
+            ctx.beginPath();
+            for (let x = 0; x < w; x += 8) {
+              const yy = yGround + 4 + r * 10 + Math.sin(x * 0.05 - state.waveOffset * 2 + r) * 2;
+              if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+            }
+            ctx.stroke();
+          }
+        }
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(15,23,42,0.3)';
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, yGround); ctx.lineTo(w, yGround); ctx.stroke();
+
+        // graded-index n(y): n highest at the "cold/dense" side
+        function nAt(y) {
+          const yC = MathX.clamp(y, yGround - atmosH, yGround);
+          const t = (yGround - yC) / atmosH; // 0 at ground, 1 at top
+          if (inferior) return nGround + (nTop - nGround) * t;      // increases upward
+          return nTop + (nGround - nTop) * (1 - t);                 // increases downward (inversion)
+        }
+
+        // ray march using invariant n·cosφ = const
+        const start = { x: 60, y: yGround - atmosH + 6 };
+        const launch = MathX.rad(theta);
+        const n0 = nAt(start.y);
+        const invariant = n0 * Math.cos(launch);
+        // sign of vertical motion: theta negative ⇒ downward (screen y increases downward)
+        let dirDown = theta < 0;
+
+        let p = { x: start.x, y: start.y };
+        const path = [p];
+        const ds = 3;
+        for (let step = 0; step < 600; step++) {
+          const n = nAt(p.y);
+          let cosPhi = invariant / n;
+          if (cosPhi > 1) { // turning point — TIR-like in graded medium
+            cosPhi = 1;
+            dirDown = !dirDown;
+          }
+          if (cosPhi < -1) cosPhi = -1;
+          const phi = Math.acos(cosPhi);
+          const sign = dirDown ? 1 : -1;
+          const dx = ds * Math.cos(phi);
+          const dy = ds * Math.sin(phi) * sign;
+          p = { x: p.x + dx, y: p.y + dy };
+          path.push(p);
+          if (p.x > w - 30 || p.x < 20 || p.y > yGround || p.y < yTop) break;
+        }
+        // draw path
+        for (let i = 0; i < path.length - 1; i++) {
+          Draw.glowRay(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, rayColor, 1, { wave: false });
+        }
+        // laser source
+        ctx.save(); ctx.translate(start.x, start.y); ctx.rotate(launch);
+        ctx.fillStyle = '#64748b'; ctx.fillRect(-22, -7, 22, 14);
+        ctx.strokeStyle = '#0f172a'; ctx.strokeRect(-22, -7, 22, 14);
+        ctx.restore();
+        Draw.label(start.x + 6, start.y - 10, 'sky ray', rayColor, 11);
+
+        // virtual image projection (where observer thinks ray came from)
+        const last = path[path.length - 1];
+        const prev = path[path.length - 2];
+        if (last && prev && last.x > 100 && last.y < yGround - 4) {
+          const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(236,72,153,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(last.x, last.y);
+          ctx.lineTo(last.x - 320 * Math.cos(ang), last.y - 320 * Math.sin(ang));
+          ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+          Draw.marker(last.x, last.y, '#ec4899', 5);
+          Draw.label(last.x - 200, last.y + (inferior ? 40 : -20),
+            inferior ? 'virtual image (below road)' : 'virtual image (above horizon)', '#ec4899', 11);
+        }
+        // observer
+        const ox = w - 50, oy = yGround - 30;
+        ctx.fillStyle = theme === 'dark' ? '#cbd5e1' : '#1e293b';
+        ctx.beginPath(); ctx.arc(ox, oy, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(ox - 16, oy + 34); ctx.quadraticCurveTo(ox, oy + 12, ox + 16, oy + 34); ctx.fill();
+        Draw.label(ox - 30, oy + 50, 'observer', theme === 'dark' ? '#cbd5e1' : '#1e293b', 11);
+      }
+
+      /* ==========================================================
+         MODE: RAINBOW  (TIR inside a spherical water drop)
+         Geometry: sun-ray is horizontal; θᵢ measured from radial normal.
+         Path = entry refraction → k internal TIRs → exit refraction.
+         Deviation:  primary D = 180° + 2θᵢ − 4θₜ
+                     secondary D = 360° + 2θᵢ − 6θₜ   (θₜ = Snell angle inside)
+         ========================================================== */
+
+      // Minimum-deviation impact parameter (Descartes rainbow ray).
+      // D(b) has a non-trivial minimum at b≈0.861 (primary) / b≈0.950 (secondary),
+      // where many nearby rays exit at nearly the same angle → the bright bow.
+      // We scan b∈(0,1) for the MINIMUM of the total deviation D.
+      function findMinDeviationImpact(n, kTIR) {
+        let bestB = 0.86, bestD = Infinity;
+        for (let bb = 0.05; bb < 0.999; bb += 0.001) {
+          const i = Math.asin(bb);
+          const sint = Math.sin(i) / n;
+          if (Math.abs(sint) > 1) continue;
+          const t = Math.asin(sint);
+          const D = kTIR === 1
+            ? Math.PI + 2 * i - 4 * t           // primary: D∈(~138°,180°], min ≈ 138° at b≈0.861
+            : 2 * Math.PI + 2 * i - 6 * t;      // secondary: min ≈ 231° at b≈0.950
+          if (D < bestD) { bestD = D; bestB = bb; }
+        }
+        return bestB;
+      }
+
+      function rainbowUpdate() {
+        const n = slider('slide-r-n');
+        const incDeg = slider('slide-r-inc');           // incidence angle θᵢ (degrees)
+        const inc = MathX.rad(incDeg);
+        const disp = slider('slide-r-disperse');
+        $('val-r-n').textContent = n.toFixed(3);
+        $('val-r-inc').textContent = incDeg.toFixed(1) + '°';
+        $('val-r-disperse').textContent = disp.toFixed(2) + '×';
+
+        // impact parameter follows from incidence: b/R = sin(θᵢ)
+        const b = Math.sin(inc);
+        // deviation D and viewing angle (primary: D=π+2θi−4θt; secondary: D=2π+2θi−6θt)
+        const sint = Math.sin(inc) / n;
+        const t = Math.abs(sint) <= 1 ? Math.asin(sint) : null;
+        const twoRefl = state.bowType === 'secondary';
+        let D = NaN;
+        if (t != null) {
+          D = twoRefl
+            ? MathX.deg(2 * Math.PI + 2 * inc - 6 * t)
+            : MathX.deg(Math.PI + 2 * inc - 4 * t);
+        }
+        $('lbl-c-angle').textContent = 'Drop θc (water→air)';
+        const tc = MathX.criticalAngle(n, 1.0);
+        $('val-c-angle').textContent = tc ? MathX.deg(tc).toFixed(2) + '°' : 'N/A';
+        $('lbl-angle-1').textContent = 'Incidence θᵢ';
+        $('val-angle-1').textContent = incDeg.toFixed(2) + '°';
+        $('lbl-card-refl').textContent = 'Deviation D';
+        $('val-refl').textContent = isNaN(D) ? '—' : D.toFixed(1) + '°';
+        $('lbl-card-refr').textContent = 'Viewing angle';
+        $('val-refr').textContent = isNaN(D) ? '—' : Math.abs(180 - (D % 360)).toFixed(1) + '°';
+
+        // fan button label sync
+        const fanBtn = $('btn-r-fan');
+        if (fanBtn) fanBtn.textContent = state.rainbowFan ? 'Hide ray fan' : 'Show ray fan';
+        if (fanBtn) fanBtn.classList.toggle('active', state.rainbowFan);
+
+        const badge = $('status-badge');
+        badge.textContent = twoRefl ? 'Secondary bow (2 TIR)' : 'Primary bow (1 TIR)';
+        badge.className = 'pill ok';
+        $('formula-title').textContent = 'Rainbow ray geometry';
+        $('formula-eq').textContent = twoRefl
+          ? 'D = 360° + 2θᵢ − 6θₜ   (two internal reflections)'
+          : 'D = 180° + 2θᵢ − 4θₜ   (one internal reflection)';
+        $('formula-explanation').textContent = tc
+          ? `b/R = sin(θᵢ) = ${b.toFixed(3)}. Inside the drop θₜ = ${t ? MathX.deg(t).toFixed(1) : '?'}° vs θc = ${MathX.deg(tc).toFixed(1)}°. ${t && t > tc ? 'TIR at the back reflects it; the ray refracts out on exit — this is the rainbow mechanism.' : 'Below θc most light refracts straight through, weakening the bow.'} The minimum-deviation (Descartes) ray gives the brightest bow at ≈42° primary, ≈51° secondary.`
+          : 'n ≤ 1: not a valid water drop.';
+        return { n, inc, b, disp, tc };
+      }
+
+      function rainbowRender(P, w, h, theme) {
+        const { n, inc, b, disp, tc } = P;
+        const twoRefl = state.bowType === 'secondary';
+        const kTIR = twoRefl ? 2 : 1;
+
+        // background
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        if (theme === 'dark') { bg.addColorStop(0, '#020617'); bg.addColorStop(1, '#0f172a'); }
+        else { bg.addColorStop(0, '#dbeafe'); bg.addColorStop(1, '#e0f2fe'); }
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+        const cx = w * 0.40, cy = h / 2, R = 115;
+        // drop sphere with radial shading (pseudo-3D)
+        const sg = ctx.createRadialGradient(cx - 30, cy - 30, 8, cx, cy, R);
+        sg.addColorStop(0, 'rgba(255,255,255,0.55)');
+        sg.addColorStop(0.4, 'rgba(125,190,255,0.25)');
+        sg.addColorStop(1, 'rgba(30,80,160,0.18)');
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(15,23,42,0.3)';
+        ctx.lineWidth = 1.5; ctx.stroke();
+        // specular highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.ellipse(cx - 38, cy - 40, 16, 9, -0.5, 0, Math.PI * 2); ctx.fill();
+        Draw.label(cx - 26, cy + R + 22, `water drop  n=${n.toFixed(3)}`,
+          theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 12);
+
+        // entry point on the LEFT side of the drop for the chosen θᵢ.
+        // Sun rays travel horizontally (+x); θᵢ is the angle from the radial normal.
+        // b/R = sin(θᵢ); entryY offset from centre = −R·(b/R) so +θᵢ strikes the upper-left.
+        const bC = MathX.clamp(b, 0, 0.999);
+        const entryY = cy - R * bC;
+        const entryX = cx - Math.sqrt(Math.max(0, R * R - (R * bC) * (R * bC)));
+
+        // ----- ray fan (Descartes construction) -----
+        if (state.rainbowFan) {
+          // trace ~14 parallel horizontal rays across the drop aperture, white, faint,
+          // to visualize how only rays near the rainbow angle cluster on exit.
+          const minDev = findMinDeviationImpact(n, kTIR);
+          const yEntryMin = cy - R * 0.98;
+          const yEntryMax = cy + R * 0.98;
+          const N = 16;
+          for (let s = 0; s < N; s++) {
+            const fy = yEntryMin + (yEntryMax - yEntryMin) * (s + 0.5) / N;
+            const yy = fy;
+            const xx = cx - Math.sqrt(Math.max(0, R * R - (yy - cy) * (yy - cy)));
+            // is this near the rainbow ray? highlight it
+            const thisB = Math.abs(yy - cy) / R;
+            const near = Math.abs(thisB - minDev) < 0.04;
+            const col = near ? 'rgba(255,255,255,0.95)' : 'rgba(180,200,230,0.4)';
+            traceDropRay(cx, cy, R, { x: xx, y: yy }, { x: 1, y: 0 }, n, n, kTIR, col, near ? 1 : 0.5, false);
+          }
+        }
+
+        // ----- main ray (single θᵢ, possibly spectrum) -----
+        let colors;
+        if (state.rainbowBeam === 'spectrum') colors = [660, 610, 570, 520, 480, 430];
+        else if (state.rainbowBeam === 'white') colors = [550];
+        else colors = [550];
+
+        colors.forEach((wlNm, k) => {
+          // dispersive n for this colour (water Cauchy B ≈ 0.0034)
+          const lamMu = wlNm * 1e-3;
+          const nLocal = state.rainbowBeam === 'white'
+            ? n
+            : (n + disp * 0.0034 * (1 / (lamMu * lamMu) - 1 / (0.589 * 0.589)));
+          const col = state.rainbowBeam === 'white' ? 'rgba(255,255,255,0.95)' : Draw.wavelengthRGBA(wlNm, 1);
+          // incoming horizontal ray
+          Draw.glowRay(entryX - 210, entryY, entryX, entryY, col, 1);
+          // trace through drop with full physics (refraction + Fresnel at every surface)
+          traceDropRay(cx, cy, R, { x: entryX, y: entryY }, { x: 1, y: 0 }, nLocal, n, kTIR, col, 1, true);
+        });
+
+        // ---- entry-point normal + incidence/refraction angle arcs (drawn once) ----
+        // Makes the INWARD bend (toward the normal) visually obvious: air→water, denser medium.
+        {
+          const N = unitRadial({ x: entryX, y: entryY }, cx, cy);   // outward normal
+          Draw.normal(entryX, entryY, N.x, N.y, 52, theme);
+          const incoming = { x: -1, y: 0 };                           // ray came from the left
+          const thetaI = Math.acos(MathX.clamp(-(incoming.x * N.x + incoming.y * N.y), -1, 1));
+          // angle between the outward normal and the reverse-incoming direction
+          Draw.angleArc({ x: entryX, y: entryY }, N, incoming, 30,
+            '#3b82f6', `θᵢ=${MathX.deg(inc).toFixed(0)}°`, theme);
+          // refracted angle inside (Snell): θₜ = arcsin(sinθᵢ/n) for the reference colour
+          const sint = Math.sin(inc) / n;
+          if (Math.abs(sint) <= 1) {
+            const thetaT = Math.asin(sint);
+            const negN = { x: -N.x, y: -N.y };
+            // refracted direction lies in the plane; build it from Snell vector form
+            const refr = MathX.refract({ x: 1, y: 0 }, N, 1.0, n);
+            if (refr) {
+              Draw.angleArc({ x: entryX, y: entryY }, negN, refr, 22,
+                '#ec4899', `θₜ=${MathX.deg(thetaT).toFixed(0)}°`, theme);
+            }
+          }
+        }
+
+        // sun label
+        Draw.label(16, 30, '☀ sun (parallel rays →)', theme === 'dark' ? 'rgba(255,220,120,0.9)' : 'rgba(180,120,0,0.9)', 13);
+
+        // mini bow preview on the right
+        drawBowPreview(w - 140, h / 2, 60, theme);
+      }
+
+      /**
+       * Trace one ray through a spherical drop with physically correct Snell
+       * refraction + Fresnel R/T at EVERY surface (entry, each internal hit, exit).
+       *   cx,cy,R : drop geometry
+       *   entry   : entry point (on the circle, air side)
+       *   vin     : incoming unit direction (in air)
+       *   nDrop   : refractive index of the drop for this colour
+       *   nRef    : nominal n (readout only, unused in math)
+       *   kTIR    : number of internal reflections before exit (1 = primary, 2 = secondary)
+       *   col     : ray colour
+       *   I0      : starting intensity
+       *   labelEnd: if true, draw a small label at the exit
+       *
+       * Path:  ENTRY (air→water, refract in) → k internal hits → EXIT (water→air, refract out)
+       * Each internal hit is either TIR (θ ≥ θc ⇒ 100% reflect) or partial
+       * (Fresnel: transmitted part leaks out in orange, reflected part R continues).
+       */
+      function traceDropRay(cx, cy, R, entry, vin, nDrop, nRef, kTIR, col, I0, labelEnd) {
+        void nRef;
+        let p = { x: entry.x, y: entry.y };
+        let v = { x: vin.x, y: vin.y };
+        const vl = Math.hypot(v.x, v.y) || 1; v.x /= vl; v.y /= vl;
+        let inside = false;
+        let I = I0;
+        let bouncesLeft = kTIR;       // internal reflections still needed before exit
+        const tc = MathX.criticalAngle(nDrop, 1.0);
+
+        for (let step = 0; step < 8 && I > 0.02; step++) {
+          const hit = rayCircleExit(p, v, cx, cy, R);
+          if (!hit) { Draw.glowRay(p.x, p.y, p.x + v.x * 200, p.y + v.y * 200, col, I); break; }
+          Draw.glowRay(p.x, p.y, hit.x, hit.y, col, I);
+          p = { x: hit.x, y: hit.y };
+          const N = unitRadial(p, cx, cy);
+          const cosI = Math.abs(v.x * N.x + v.y * N.y);
+          const thetaI = Math.acos(MathX.clamp(cosI, -1, 1));
+
+          if (!inside) {
+            // ---------- ENTRY: air → water ----------
+            const refr = MathX.refract(v, N, 1.0, nDrop);
+            if (!refr) { // grazing — reflect off the front (shouldn't normally happen)
+              v = MathX.reflect(v, N); p = { x: p.x + v.x * 0.5, y: p.y + v.y * 0.5 }; continue;
+            }
+            // faint partial reflection straight back (usually a few %)
+            const fr0 = MathX.fresnel(1.0, nDrop, thetaI);
+            if (fr0.R > 0.04) {
+              const rv = MathX.reflect(v, N);
+              Draw.glowRay(hit.x, hit.y, hit.x + 45 * rv.x, hit.y + 45 * rv.y, col, fr0.R * I * 0.5);
+            }
+            v = refr; inside = true;
+            p = { x: p.x + v.x * 0.5, y: p.y + v.y * 0.5 };
+          } else if (bouncesLeft > 0) {
+            // ---------- INTERNAL HIT (TIR or partial reflection) ----------
+            const isTIR = tc != null && thetaI >= tc - 1e-6;
+            const fr = MathX.fresnel(nDrop, 1.0, thetaI);
+            if (isTIR) {
+              // Total Internal Reflection — 100% reflects, nothing leaks
+              v = MathX.reflect(v, N);
+              Draw.marker(hit.x, hit.y, '#10b981', 3);
+            } else {
+              // Partial: transmitted part refracts OUT (leak, orange); reflected part continues
+              const leak = MathX.refract(v, N, nDrop, 1.0);
+              if (leak) {
+                Draw.glowRay(hit.x, hit.y, hit.x + 150 * leak.x, hit.y + 150 * leak.y, '#f59e0b', fr.T * I * 0.7);
+                Draw.marker(hit.x, hit.y, '#f59e0b', 2);
+              }
+              v = MathX.reflect(v, N);
+              I *= fr.R;                       // only the reflected energy stays inside
+            }
+            bouncesLeft--;
+            p = { x: p.x + v.x * 0.5, y: p.y + v.y * 0.5 };
+          } else {
+            // ---------- EXIT: water → air ----------
+            const refr = MathX.refract(v, N, nDrop, 1.0);
+            if (!refr) { // spurious TIR at exit — keep bouncing
+              v = MathX.reflect(v, N); p = { x: p.x + v.x * 0.5, y: p.y + v.y * 0.5 }; bouncesLeft = 1; continue;
+            }
+            const fr = MathX.fresnel(nDrop, 1.0, thetaI);
+            Draw.glowRay(hit.x, hit.y, hit.x + 270 * refr.x, hit.y + 270 * refr.y, col, fr.T * I);
+            Draw.marker(hit.x, hit.y, '#ec4899', 3);
+            if (labelEnd) Draw.label(hit.x + 56, hit.y + 12, '→ viewing', col, 10);
+            break;
+          }
+        }
+      }
+
+      function unitRadial(p, cx, cy) {
+        const dx = p.x - cx, dy = p.y - cy;
+        const l = Math.hypot(dx, dy) || 1;
+        return { x: dx / l, y: dy / l };
+      }
+      function rayCircleExit(p, v, cx, cy, R) {
+        // p + t·v on circle of radius R about (cx,cy), smallest t > tiny
+        const ox = p.x - cx, oy = p.y - cy;
+        const b = ox * v.x + oy * v.y;
+        const c = ox * ox + oy * oy - R * R;
+        const disc = b * b - c;
+        if (disc < 0) return null;
+        const t = -b + Math.sqrt(disc);
+        if (t < 1e-3) return null;
+        return { x: p.x + t * v.x, y: p.y + t * v.y };
+      }
+      function drawBowPreview(cxp, cyp, rad, theme) {
+        const colors = state.bowType === 'primary' ? [660, 600, 560, 510, 470, 430] : [430, 470, 510, 560, 600, 660];
+        for (let i = 0; i < colors.length; i++) {
+          ctx.strokeStyle = Draw.wavelengthRGBA(colors[i], 0.9);
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          const r = rad + i * 5;
+          const startAng = state.bowType === 'primary' ? Math.PI : 0;
+          ctx.arc(cxp, cyp, r, startAng, startAng + Math.PI);
+          ctx.stroke();
+        }
+        Draw.label(cxp - 40, cyp + rad + 40,
+          state.bowType === 'primary' ? 'Primary bow ~42°' : 'Secondary bow ~51° (reversed)',
+          theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 11);
+      }
+
+      /* ==========================================================
+         MODE: NUMERICAL SOLVER  (reuses sandbox renderer)
+         ========================================================== */
+      function solverUpdate() {
+        const n1 = parseFloat($('inp-sol-n1').value) || 1;
+        const n2 = parseFloat($('inp-sol-n2').value) || 1;
+        const thetaDeg = MathX.clamp(parseFloat($('inp-sol-theta').value) || 0, 0, 89);
+        const wl = slider('slide-sol-wave');
+        $('val-sol-wave').textContent = wl + ' nm';
+
+        const tc = MathX.criticalAngle(n1, n2);
+        const thetaI = MathX.rad(thetaDeg);
+        const fr = MathX.fresnel(n1, n2, thetaI);
+        $('lbl-c-angle').textContent = 'Critical Angle (θc)';
+        $('val-c-angle').textContent = tc == null ? 'N/A' : MathX.deg(tc).toFixed(2) + '°';
+        $('lbl-angle-1').textContent = 'Incident Angle (θᵢ)';
+        $('val-angle-1').textContent = thetaDeg.toFixed(2) + '°';
+        $('val-refl').textContent = (fr.R * 100).toFixed(2) + '%';
+        $('val-refr').textContent = (fr.T * 100).toFixed(2) + '%';
+
+        // Brewster angle (p-polarization null): tanθB = n2/n1 (light going n1→n2)
+        const brewster = (n1 > 0) ? MathX.deg(Math.atan(n2 / n1)) : NaN;
+
+        // ---- Extended worked-solution panel ----
+        const sinI = Math.sin(thetaI);
+        const lhs = n1 * sinI;
+        if (fr.thetaT == null || fr.tir) {
+          $('solver-snell').innerHTML =
+            `Snell: n₁sinθᵢ = ${n1.toFixed(3)}·sin(${thetaDeg.toFixed(1)}°) = <b>${lhs.toFixed(4)}</b> &gt; n₂=${n2.toFixed(3)} ⟹ sinθₜ&gt;1 ⇒ <b>TIR</b>`;
+        } else {
+          const ttDeg = MathX.deg(fr.thetaT);
+          $('solver-snell').innerHTML =
+            `Snell: ${n1.toFixed(3)}·sin(${thetaDeg.toFixed(1)}°)=${lhs.toFixed(4)} = ${n2.toFixed(3)}·sinθₜ ⇒ θₜ = <b>${ttDeg.toFixed(2)}°</b>`;
+        }
+        // Fresnel polarization split (Rs, Rp)
+        if (fr.tir) {
+          $('solver-fresnel').innerHTML =
+            `Fresnel: Rₛ = Rₚ = <b>1.000</b>, T = 0 (100% reflected, both polarizations)`;
+        } else {
+          const cI = Math.cos(thetaI), cT = Math.cos(fr.thetaT);
+          const rs = (n1 * cI - n2 * cT) / (n1 * cI + n2 * cT);
+          const rp = (n2 * cI - n1 * cT) / (n2 * cI + n1 * cT);
+          $('solver-fresnel').innerHTML =
+            `Fresnel: Rₛ=${(rs*rs*100).toFixed(2)}%, Rₚ=${(rp*rp*100).toFixed(2)}% ⟹ R̄(unpol)=<b>${(fr.R*100).toFixed(2)}%</b>, T=<b>${(fr.T*100).toFixed(2)}%</b>`;
+        }
+        $('solver-brewster').innerHTML =
+          `Brewster θB = tan⁻¹(n₂/n₁) = tan⁻¹(${(n2/n1).toFixed(4)}) = <b>${brewster.toFixed(2)}°</b>${Math.abs(thetaDeg-brewster)<0.3 ? '  ← you are here (Rₚ≈0, reflected light is pure s-polarized)' : ''}`;
+
+        // notes line
+        let notes = '';
+        if (tc != null && Math.abs(thetaDeg - MathX.deg(tc)) < 0.2)
+          notes = '⚠ At the critical angle the refracted ray grazes the surface (θₜ = 90°).';
+        else if (tc == null)
+          notes = 'n₁ ≤ n₂ ⇒ light bends toward the normal on entering n₂; TIR never occurs.';
+        else if (fr.tir)
+          notes = '✓ Past θc: 100% reflection. An evanescent wave tunnels into n₂ but carries no net energy.';
+        else
+          notes = 'Partial reflection + refraction. Most energy is transmitted; reflection grows toward θc.';
+        $('solver-notes').innerHTML = notes;
+
+        const badge = $('status-badge');
+        $('formula-title').textContent = 'Step-by-step TIR check';
+        if (tc == null) {
+          badge.textContent = 'No TIR (n₁ ≤ n₂)'; badge.className = 'pill warn';
+          $('formula-eq').textContent = `θc = sin⁻¹(${n2.toFixed(3)}/${n1.toFixed(3)}) → undefined`;
+          $('formula-explanation').textContent = 'Since n₁ ≤ n₂ there is no real critical angle; refraction occurs for every θᵢ.';
+        } else {
+          const tcDeg = MathX.deg(tc);
+          $('formula-eq').textContent = `θc = sin⁻¹(${n2.toFixed(3)}/${n1.toFixed(3)}) = ${tcDeg.toFixed(2)}°`;
+          if (thetaDeg >= tcDeg) {
+            badge.textContent = 'TIR OCCURS'; badge.className = 'pill ok';
+            $('formula-explanation').textContent = `θᵢ (${thetaDeg.toFixed(2)}°) ≥ θc (${tcDeg.toFixed(2)}°) ⇒ Total Internal Reflection: R=100%.`;
+          } else {
+            badge.textContent = 'No TIR (refracts)'; badge.className = 'pill warn';
+            $('formula-explanation').textContent = `θᵢ (${thetaDeg.toFixed(2)}°) < θc (${tcDeg.toFixed(2)}°) ⇒ light refracts into n₂ with θₜ=${MathX.deg(fr.thetaT || 0).toFixed(2)}°.`;
+          }
+        }
+        renderSteps(n1, n2, thetaDeg);
+        return { n1, n2, thetaDeg, tc, fr, wl };
+      }
+      function solverRender(P, w, h, theme) {
+        // reuse sandbox drawing with solver numbers (no sliders needed)
+        const { n1, n2, thetaDeg, tc, fr, wl } = P;
+        sandboxRender({ n1, n2, theta: MathX.rad(thetaDeg), tc, fr, wl }, w, h, theme);
+      }
+
+      /* ==========================================================
+         MODE: LENS  (thin-lens equation + three principal rays)
+         Sign convention (real-is-positive):
+           f > 0  converging (convex);   f < 0  diverging (concave)
+           o > 0  object on the left (real object)
+           i > 0  real image on the right;  i < 0  virtual image on the left
+           M = −i/o   (negative ⇒ inverted)
+         Lens equation:   1/o + 1/i = 1/f   ⇒   i = of/(o−f)
+         ========================================================== */
+      function lensUpdate() {
+        const fRaw = slider('slide-l-f');                 // always positive from slider
+        const f = (state.lensType === 'concave') ? -fRaw : fRaw;
+        const o = slider('slide-l-o');
+        const ho = slider('slide-l-h');
+
+        $('val-l-f').textContent = f.toFixed(1) + ' cm';
+        $('val-l-o').textContent = o.toFixed(1) + ' cm';
+        $('val-l-h').textContent = ho.toFixed(1) + ' cm';
+
+        // lens equation
+        const i = (o * f) / (o - f);                       // signed image distance
+        const M = -i / o;                                  // signed magnification
+        const hi = M * ho;                                 // signed image height
+        const realImage = i > 0;
+
+        $('lbl-c-angle').textContent = 'Focal length f';
+        $('val-c-angle').textContent = f.toFixed(2) + ' cm';
+        $('lbl-angle-1').textContent = 'Image distance i';
+        $('val-angle-1').textContent = i.toFixed(2) + ' cm';
+        $('lbl-card-refl').textContent = 'Magnification M';
+        $('val-refl').textContent = M.toFixed(2) + '×';
+        $('lbl-card-refr').textContent = 'Image type';
+        $('val-refr').textContent = realImage ? 'REAL' : 'VIRTUAL';
+
+        const badge = $('status-badge');
+        $('formula-title').textContent = 'Thin-lens equation';
+        $('formula-eq').textContent = `1/o + 1/i = 1/f   ⇒   i = ${i.toFixed(2)} cm`;
+        if (state.lensType === 'concave') {
+          badge.textContent = 'Diverging lens — virtual, upright, reduced'; badge.className = 'pill warn';
+          $('formula-explanation').textContent =
+            `A concave lens (f<0) always forms a virtual image: i = ${i.toFixed(1)} cm (negative ⇒ same side as object), M = ${M.toFixed(2)} (positive ⇒ upright, |M|<1 ⇒ reduced).`;
+        } else if (realImage) {
+          badge.textContent = 'Converging lens — REAL image'; badge.className = 'pill ok';
+          $('formula-explanation').textContent =
+            `o = ${o.toFixed(1)} cm > f = ${f.toFixed(1)} cm ⇒ real image. i = ${i.toFixed(1)} cm, M = ${M.toFixed(2)} (negative ⇒ inverted). ${Math.abs(M)>1?'Magnified.':Math.abs(M)<1?'Reduced.':'Same size (o=2f).'}`;
+        } else {
+          badge.textContent = 'Converging lens — VIRTUAL image (magnifying glass)'; badge.className = 'pill warn';
+          $('formula-explanation').textContent =
+            `o = ${o.toFixed(1)} cm < f = ${f.toFixed(1)} cm ⇒ virtual image. i = ${i.toFixed(1)} cm (negative ⇒ same side as object), M = ${M.toFixed(2)} (upright, magnified — this is how a magnifying glass works).`;
+        }
+
+        // worked-solution panel
+        $('lens-eq').innerHTML =
+          `1/o + 1/i = 1/f  ⇒  1/${o.toFixed(1)} + 1/i = 1/${f.toFixed(1)}  ⇒  i = <b>${i.toFixed(2)} cm</b>`;
+        $('lens-mag').innerHTML =
+          `M = −i/o = −(${i.toFixed(1)})/${o.toFixed(1)} = <b>${M.toFixed(3)}</b>  ⇒  hᵢ = M·hₒ = <b>${hi.toFixed(2)} cm</b>`;
+        let notes = '';
+        if (state.lensType === 'concave') {
+          notes = 'Diverging lens: image is ALWAYS virtual, upright, and reduced (|M| < 1) for any real object.';
+        } else if (Math.abs(o - 2 * f) < 0.3) {
+          notes = '⚠ o = 2f ⇒ image is real, inverted, same size (M = −1).';
+        } else if (Math.abs(o - f) < 0.3) {
+          notes = '⚠ o = f ⇒ no image forms (rays exit parallel, i → ∞).';
+        } else if (o > 2 * f) {
+          notes = 'o > 2f: real, inverted, reduced image (camera / eye regime).';
+        } else if (o > f) {
+          notes = 'f < o < 2f: real, inverted, magnified image (projector regime).';
+        } else {
+          notes = 'o < f: virtual, upright, magnified image (magnifying-glass regime).';
+        }
+        $('lens-notes').innerHTML = notes;
+        return { f, o, i, M, ho, hi, realImage };
+      }
+
+      function lensRender(P, w, h, theme) {
+        const { f, o, i, M, ho, hi, realImage } = P;
+        // pixels-per-cm scale: fit object+focal geometry on screen
+        const cx = w / 2;                         // lens at canvas centre
+        const cy = h / 2;                         // optical axis
+        const worldRange = Math.max(o + Math.max(i, 0), 2 * Math.abs(f), 30) + 8;
+        const scale = (w * 0.46) / worldRange;    // px per cm
+
+        // background
+        ctx.fillStyle = theme === 'dark' ? 'rgba(15,23,42,0.5)' : 'rgba(241,245,249,0.9)';
+        ctx.fillRect(0, 0, w, h);
+
+        // ---------- optical axis ----------
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.25)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ---------- focal points (both sides, ±f) ----------
+        const drawFocal = (x, label, color) => {
+          const px = cx + x * scale;
+          if (px < 4 || px > w - 4) return;
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(px, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+          Draw.label(px - 6, cy + 16, label, color, 10);
+        };
+        drawFocal(f, 'F', '#10b981');
+        drawFocal(-f, "F'", '#10b981');
+        // 2f markers for converging lens (regime guide)
+        if (f > 0) {
+          drawFocal(2 * f, '2F', 'rgba(236,72,153,0.6)');
+          drawFocal(-2 * f, "2F'", 'rgba(236,72,153,0.6)');
+        }
+
+        // ---------- lens body ----------
+        drawLensBody(cx, cy, state.lensType, theme);
+
+        // ---------- object (upright arrow on the left) ----------
+        const objX = cx - o * scale;
+        const objTopY = cy - ho * scale;
+        const objColor = '#3b82f6';
+        ctx.strokeStyle = objColor; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(objX, cy); ctx.lineTo(objX, objTopY); ctx.stroke();
+        drawArrowHead(objX, objTopY, 0, -1, objColor);
+        Draw.label(objX - 14, cy + 16, 'object', objColor, 11);
+
+        // ---------- image ----------
+        const imgX = cx + i * scale;               // signed: virtual (i<0) ⇒ left of lens
+        const imgTopY = cy - hi * scale;           // signed: inverted (hi<0) ⇒ below axis
+        const imgColor = realImage ? '#ec4899' : 'rgba(236,72,153,0.55)';
+
+        // ---------- principal rays ----------
+        const tip = { x: objX, y: objTopY };
+        const lensC = { x: cx, y: cy };
+        const rayCol = theme === 'dark' ? 'rgba(255,220,120,0.95)' : 'rgba(180,120,0,0.95)';
+
+        if (state.lensRays === 'fan') {
+          // ray fan from object tip — several rays at different angles through the lens
+          drawLensFan(tip, lensC, cx, cy, f, scale, w, rayCol, theme);
+        } else {
+          drawPrincipalRays(tip, lensC, cx, cy, f, i, scale, w, realImage, imgTopY, rayCol, theme);
+        }
+
+        // draw image arrow (on top of rays)
+        if (isFinite(imgX) && Math.abs(i) < worldRange * 2) {
+          ctx.strokeStyle = imgColor; ctx.lineWidth = 3;
+          if (!realImage) ctx.setLineDash([5, 4]);
+          ctx.beginPath(); ctx.moveTo(imgX, cy); ctx.lineTo(imgX, imgTopY); ctx.stroke();
+          ctx.setLineDash([]);
+          drawArrowHead(imgX, imgTopY, 0, hi >= 0 ? -1 : 1, imgColor);
+          Draw.label(imgX - 18, cy + 16, realImage ? 'real image' : 'virtual image', imgColor, 11);
+        }
+
+        // regime label
+        let regime = '';
+        if (state.lensType === 'concave') regime = 'diverging: always virtual, upright, reduced';
+        else if (Math.abs(o - f) < 0.3) regime = 'o ≈ f: no image (i → ∞)';
+        else if (o > 2 * f) regime = `o > 2f: real, inverted, reduced   |M| = ${Math.abs(M).toFixed(2)}`;
+        else if (Math.abs(o - 2 * f) < 0.3) regime = `o = 2f: real, inverted, M = −1`;
+        else if (o > f) regime = `f < o < 2f: real, inverted, magnified   |M| = ${Math.abs(M).toFixed(2)}`;
+        else regime = `o < f: virtual, upright, magnified   |M| = ${Math.abs(M).toFixed(2)}`;
+        Draw.label(16, 28, regime, theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)', 12);
+        // drag hint
+        Draw.label(16, h - 18, '↔ drag the object arrow horizontally to change o',
+          theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(15,23,42,0.4)', 11);
+      }
+
+      // ---- lens drawing helpers ----
+      function drawLensBody(cx, cy, type, theme) {
+        const halfH = 110, lensW = 16;
+        ctx.save();
+        const grad = ctx.createLinearGradient(cx - lensW, 0, cx + lensW, 0);
+        if (type === 'convex') {
+          grad.addColorStop(0, 'rgba(59,130,246,0.15)');
+          grad.addColorStop(0.5, 'rgba(59,130,246,0.40)');
+          grad.addColorStop(1, 'rgba(59,130,246,0.15)');
+          ctx.fillStyle = grad;
+          // biconvex: two arcs bulging out
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, lensW, halfH, 0, -Math.PI / 2, Math.PI / 2);
+          ctx.ellipse(cx, cy, lensW, halfH, 0, Math.PI / 2, -Math.PI / 2, true);
+          ctx.closePath(); ctx.fill();
+        } else {
+          grad.addColorStop(0, 'rgba(59,130,246,0.40)');
+          grad.addColorStop(0.5, 'rgba(59,130,246,0.15)');
+          grad.addColorStop(1, 'rgba(59,130,246,0.40)');
+          ctx.fillStyle = grad;
+          // biconcave: pinch in the middle, fat at edges → use two vertical lines + top/bottom arcs
+          ctx.beginPath();
+          ctx.moveTo(cx - lensW * 0.4, cy - halfH);
+          ctx.quadraticCurveTo(cx + lensW * 0.8, cy, cx - lensW * 0.4, cy + halfH);
+          ctx.lineTo(cx + lensW * 0.4, cy + halfH);
+          ctx.quadraticCurveTo(cx - lensW * 0.8, cy, cx + lensW * 0.4, cy - halfH);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.35)';
+        ctx.lineWidth = 1.8; ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawArrowHead(x, y, dx, dy, color) {
+        const s = 9;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(dy, dx));
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(-s, -s * 0.55); ctx.lineTo(-s, s * 0.55);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+
+      /**
+       * Three principal rays from the object tip (textbook construction):
+       *  R1: through the lens centre — goes straight.
+       *  R2: parallel to the axis until the lens, then through the far focal point (convex)
+       *      / diverging as if from the near focal point (concave).
+       *  R3: through the near focal point until the lens, then parallel to the axis (convex)
+       *      / heading toward the far focal point then parallel (concave).
+       * Virtual portions drawn dashed.
+       */
+      function drawPrincipalRays(tip, lensC, cx, cy, f, i, scale, w, realImage, imgTopY, col, theme) {
+        const farF = { x: cx + f * scale, y: cy };       // focal point on image side
+        const nearF = { x: cx - f * scale, y: cy };      // focal point on object side
+
+        const dashedCol = theme === 'dark' ? 'rgba(255,220,120,0.4)' : 'rgba(180,120,0,0.4)';
+        const drawSeg = (x1, y1, x2, y2, c) => Draw.glowRay(x1, y1, x2, y2, c, 0.95, { width: 1 });
+        const drawDashed = (x1, y1, x2, y2, c) => {
+          ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = c; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        };
+
+        // ---- R1: through centre, straight ----
+        {
+          const dir = { x: lensC.x - tip.x, y: lensC.y - tip.y };
+          const L = Math.hypot(dir.x, dir.y);
+          const ux = dir.x / L, uy = dir.y / L;
+          // object tip → lens centre
+          drawSeg(tip.x, tip.y, lensC.x, lensC.y, col);
+          // continue past lens to the right edge (or to image height)
+          const endX = realImage ? (cx + i * scale) : w - 10;
+          const t = (endX - lensC.x) / ux;
+          drawSeg(lensC.x, lensC.y, lensC.x + ux * t, lensC.y + uy * t, col);
+          if (!realImage) {
+            // virtual extension backward (left) to the virtual image
+            const tv = (cx + i * scale - lensC.x) / ux;   // i is negative
+            drawDashed(lensC.x, lensC.y, lensC.x + ux * tv, lensC.y + uy * tv, dashedCol);
+          }
+        }
+
+        // ---- R2: parallel to axis until lens, then refracted ----
+        {
+          // incoming: tip → (cx, tip.y)
+          drawSeg(tip.x, tip.y, cx, tip.y, col);
+          // refracted ray leaves lens toward far focal point (convex) / away from near focal point (concave)
+          // direction after lens: from nearF (virtual source for concave) or toward farF (convex)
+          let afterDir;
+          if (f > 0) {
+            afterDir = { x: farF.x - cx, y: farF.y - tip.y };  // heads toward far focal line at cy
+          } else {
+            // diverging: ray diverges as if coming FROM nearF (object-side focal pt)
+            afterDir = { x: cx - nearF.x, y: tip.y - nearF.y }; // away from nearF
+          }
+          const L = Math.hypot(afterDir.x, afterDir.y) || 1;
+          afterDir.x /= L; afterDir.y /= L;
+          const endX = w - 10;
+          const t2 = (endX - cx) / afterDir.x;
+          drawSeg(cx, tip.y, cx + afterDir.x * t2, tip.y + afterDir.y * t2, col);
+          // virtual extension back for diverging/convex-virtual
+          if (f < 0 || !realImage) {
+            // back-trace to find where it meets the image height
+            const tv = (cx + i * scale - cx) / afterDir.x;     // to virtual image x
+            drawDashed(cx, tip.y, cx + afterDir.x * tv, tip.y + afterDir.y * tv, dashedCol);
+          }
+        }
+
+        // ---- R3: through near focal point → lens → parallel to axis ----
+        if (Math.abs(f) > 0.1) {
+          if (f > 0) {
+            // convex: object tip → through near focal point → hits lens → exits parallel (at tip's height? no, parallel)
+            // ray from tip heading toward nearF, extended to the lens plane (x=cx)
+            const dir3 = { x: nearF.x - tip.x, y: nearF.y - tip.y };
+            const L3 = Math.hypot(dir3.x, dir3.y) || 1;
+            const ux3 = dir3.x / L3, uy3 = dir3.y / L3;
+            // does this ray actually travel rightward to the lens?
+            if (ux3 > 0.001) {
+              const t3 = (cx - tip.x) / ux3;
+              const lensHitY = tip.y + uy3 * t3;
+              drawSeg(tip.x, tip.y, cx, lensHitY, col);
+              // exits parallel to axis at lensHitY
+              const endX = w - 10;
+              drawSeg(cx, lensHitY, endX, lensHitY, col);
+              if (!realImage) {
+                const tv = (cx + i * scale - cx);
+                drawDashed(cx, lensHitY, cx + tv, lensHitY, dashedCol);
+              }
+            }
+          } else {
+            // concave: ray heading toward the far focal point (image side), enters lens,
+            // exits parallel. By reversibility: a ray that would be parallel coming from
+            // the right exits heading AWAY from nearF. Equivalently, aim the incoming ray
+            // at the far focal point (farF is on the right, behind lens).
+            const dir3 = { x: farF.x - tip.x, y: farF.y - tip.y };
+            const L3 = Math.hypot(dir3.x, dir3.y) || 1;
+            const ux3 = dir3.x / L3, uy3 = dir3.y / L3;
+            if (ux3 > 0.001) {
+              const t3 = (cx - tip.x) / ux3;
+              const lensHitY = tip.y + uy3 * t3;
+              drawSeg(tip.x, tip.y, cx, lensHitY, col);
+              const endX = w - 10;
+              drawSeg(cx, lensHitY, endX, lensHitY, col);
+              // virtual extension back
+              const tv = (cx + i * scale - cx);
+              drawDashed(cx, lensHitY, cx + tv, lensHitY, dashedCol);
+            }
+          }
+        }
+      }
+
+      /**
+       * Fan of rays from the object tip through different heights on the lens,
+       * each refracted by the thin-lens rule (parallel component → focal rule).
+       * Shows convergence (real image) or divergence (virtual image).
+       */
+      function drawLensFan(tip, lensC, cx, cy, f, scale, w, col, theme) {
+        const lensHalf = 105;
+        const farFy = cy;                              // focal "line" is the axis height
+        const dashedCol = theme === 'dark' ? 'rgba(255,220,120,0.4)' : 'rgba(180,120,0,0.4)';
+        const drawDashed = (x1, y1, x2, y2, c) => {
+          ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = c; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        };
+        const N = 7;
+        for (let k = 0; k < N; k++) {
+          const yLens = cy - lensHalf + (2 * lensHalf) * (k / (N - 1));
+          // incoming segment: tip → (cx, yLens)
+          Draw.glowRay(tip.x, tip.y, cx, yLens, col, 0.55, { width: 0.8 });
+          // outgoing: a ray hitting the lens at height h = (cy - yLens) is refracted
+          // so that (for a source at object distance o) it heads toward the image point.
+          // Thin-lens equivalent: outgoing direction passes through the IMAGE point.
+          const o_cm = (cx - tip.x) / scale;            // object distance in cm
+          const i_cm = (o_cm * f) / (o_cm - f);         // image distance (signed)
+          const imgX = cx + i_cm * scale;
+          // image height from similar triangles: M = -i/o; hi = M * ho; ho = (cy - tip.y)/scale
+          const ho_cm = (cy - tip.y) / scale;
+          const hi_cm = (-i_cm / o_cm) * ho_cm;
+          const imgY = cy - hi_cm * scale;
+          if (i_cm > 0 && isFinite(imgX)) {
+            // real image: ray goes from lens hit toward image point, then beyond
+            const dx = imgX - cx, dy = imgY - yLens;
+            const L = Math.hypot(dx, dy) || 1;
+            const ux = dx / L, uy = dy / L;
+            const endX = w - 6;
+            const t = (endX - cx) / ux;
+            Draw.glowRay(cx, yLens, cx + ux * t, yLens + uy * t, col, 0.55, { width: 0.8 });
+          } else if (isFinite(imgX)) {
+            // virtual image: outgoing ray diverges; its backward extension hits the virtual image
+            // outgoing direction = away from virtual image point (which is on the left)
+            const dx = cx - imgX, dy = yLens - imgY;    // from virtual img → lens hit → beyond
+            const L = Math.hypot(dx, dy) || 1;
+            const ux = dx / L, uy = dy / L;
+            const endX = w - 6;
+            const t = (endX - cx) / ux;
+            Draw.glowRay(cx, yLens, cx + ux * t, yLens + uy * t, col, 0.55, { width: 0.8 });
+            drawDashed(cx, yLens, imgX, imgY, dashedCol);
+          }
+        }
+      }
+
+      function lensParamsFromUI() {
+        const fRaw = slider('slide-l-f');
+        const f = (state.lensType === 'concave') ? -fRaw : fRaw;
+        const o = slider('slide-l-o');
+        const ho = slider('slide-l-h');
+        const i = (o * f) / (o - f);
+        const M = -i / o;
+        const hi = M * ho;
+        return { f, o, i, M, ho, hi, realImage: i > 0 };
+      }
+
+
+      /* ==========================================================
+         PLOT: animated reflectance curve (sandbox & solver)
+         ========================================================== */
+      let plotState = { n1: 1.5, n2: 1.0, theta: 0.5 };
+      function drawPlot() {
+        const pc = plotCanvas, p = plotCtx;
+        p.clearRect(0, 0, pc.width, pc.height);
+        const W = pc.width, H = pc.height;
+        const mL = 32, mR = 10, mT = 10, mB = 22;
+        const plotW = W - mL - mR, plotH = H - mT - mB;
+
+        // smooth-follow the active numbers
+        const tgt = (state.mode === 'sandbox' || state.mode === 'solver')
+          ? (state.mode === 'sandbox'
+            ? { n1: dispersiveIndex('s-n1', slider('slide-s-wave'), 'slide-s-n1'),
+                n2: dispersiveIndex('s-n2', slider('slide-s-wave'), 'slide-s-n2'),
+                theta: slider('slide-s-theta') }
+            : { n1: parseFloat($('inp-sol-n1').value), n2: parseFloat($('inp-sol-n2').value),
+                theta: parseFloat($('inp-sol-theta').value) })
+          : plotState;
+        plotState.n1 += (tgt.n1 - plotState.n1) * 0.2;
+        plotState.n2 += (tgt.n2 - plotState.n2) * 0.2;
+        plotState.theta += (tgt.theta - plotState.theta) * 0.2;
+        const n1 = plotState.n1, n2 = plotState.n2;
+
+        // axes
+        p.strokeStyle = 'rgba(150,160,180,0.35)'; p.lineWidth = 1;
+        p.beginPath(); p.moveTo(mL, mT); p.lineTo(mL, mT + plotH); p.lineTo(mL + plotW, mT + plotH); p.stroke();
+        p.fillStyle = 'rgba(150,160,180,0.8)'; p.font = "9px 'JetBrains Mono'";
+        p.fillText('R', 16, mT + 8); p.fillText('100%', 2, mT + 8);
+        p.fillText('0°', mL - 6, mT + plotH + 12); p.fillText('90°', mL + plotW - 18, mT + plotH + 12);
+
+        const hasTir = n1 > n2;
+        let tcDeg = 0;
+        if (hasTir) {
+          tcDeg = MathX.deg(Math.asin(MathX.clamp(n2 / n1, 0, 1)));
+          const xC = mL + (tcDeg / 90) * plotW;
+          p.fillStyle = 'rgba(16,185,129,0.10)'; p.fillRect(xC, mT, mL + plotW - xC, plotH);
+          p.strokeStyle = 'rgba(16,185,129,0.6)'; p.setLineDash([3, 3]);
+          p.beginPath(); p.moveTo(xC, mT); p.lineTo(xC, mT + plotH); p.stroke(); p.setLineDash([]);
+          p.fillStyle = '#10b981'; p.fillText('θc', xC + 3, mT + 10);
+          p.fillText('TIR', xC + 3, mT + 22);
+        }
+        // curve
+        p.strokeStyle = '#3b82f6'; p.lineWidth = 2; p.beginPath();
+        for (let d = 0; d <= 90; d += 1) {
+          const r = MathX.rad(d);
+          const fr = MathX.fresnel(n1, n2, r);
+          const x = mL + (d / 90) * plotW;
+          const y = mT + plotH - fr.R * plotH;
+          if (d === 0) p.moveTo(x, y); else p.lineTo(x, y);
+        }
+        p.stroke();
+        // current marker
+        if (state.mode === 'sandbox' || state.mode === 'solver') {
+          const th = plotState.theta;
+          const fr = MathX.fresnel(n1, n2, MathX.rad(th));
+          const x = mL + (th / 90) * plotW;
+          const y = mT + plotH - fr.R * plotH;
+          p.fillStyle = '#ec4899';
+          p.beginPath(); p.arc(x, y, 4, 0, Math.PI * 2); p.fill();
+          p.fillStyle = '#ec4899';
+          p.fillText(`${(fr.R * 100).toFixed(0)}%`, x + 5, y - 5);
+          p.fillText(`θi=${th.toFixed(0)}°`, x - 18, mT + plotH + 12);
+        }
+      }
+
+      /* ==========================================================
+         MASTER update dispatcher
+         ========================================================== */
+      function onParamChange() {
+        // keep sandbox theta tween synced to slider unless dragging
+        if (state.mode === 'sandbox') {
+          Tween.to('sandboxTheta', slider('slide-s-theta'));
+        }
+        switch (state.mode) {
+          case 'sandbox': sandboxUpdate(); break;
+          case 'fiber': fiberUpdate(); break;
+          case 'prism': prismUpdate(); break;
+          case 'mirage': mirageUpdate(); break;
+          case 'rainbow': rainbowUpdate(); break;
+          case 'lens': lensUpdate(); break;
+          case 'solver': solverUpdate(); break;
+        }
+      }
+
+      /* ==========================================================
+         MAIN RENDER LOOP
+         ========================================================== */
+      let lastT = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+        state.waveOffset += 0.3;
+        Tween.tick(dt);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const w = canvas.width, h = canvas.height;
+        const theme = state.theme;
+
+        // For sandbox, the rendered theta is the tweened value (smooth)
+        let P;
+        switch (state.mode) {
+          case 'sandbox': {
+            P = sandboxParamsFromUI();
+            sandboxRender(P, w, h, theme);
+            break;
+          }
+          case 'fiber': P = fiberParamsFromUI(); fiberRender(P, w, h, theme); break;
+          case 'prism': P = prismParamsFromUI(); prismRender(P, w, h, theme); break;
+          case 'mirage': P = mirageParamsFromUI(); mirageRender(P, w, h, theme); break;
+          case 'rainbow': P = rainbowParamsFromUI(); rainbowRender(P, w, h, theme); break;
+          case 'lens': P = lensParamsFromUI(); lensRender(P, w, h, theme); break;
+          case 'solver': P = solverParamsFromUI(); solverRender(P, w, h, theme); break;
+        }
+        if (state.mode === 'sandbox' || state.mode === 'solver') drawPlot();
+        requestAnimationFrame(loop);
+      }
+
+      // light param extractors (read once per frame, not per nested call)
+      function sandboxParamsFromUI() {
+        const wl = slider('slide-s-wave');
+        const n1 = dispersiveIndex('s-n1', wl, 'slide-s-n1');
+        const n2 = dispersiveIndex('s-n2', wl, 'slide-s-n2');
+        // use tweened theta for smooth animation, but slider value for readouts
+        const thetaDeg = Tween.get('sandboxTheta');
+        const theta = MathX.rad(thetaDeg);
+        const tc = MathX.criticalAngle(n1, n2);
+        const fr = MathX.fresnel(n1, n2, theta);
+        return { n1, n2, theta, thetaDeg, tc, fr, wl };
+      }
+      function fiberParamsFromUI() {
+        const wl = slider('slide-f-wave');
+        const ncore = dispersiveIndex('f-core', wl, 'slide-f-ncore');
+        const nclad = dispersiveIndex('f-clad', wl, 'slide-f-nclad');
+        return { ncore, nclad, tc: MathX.criticalAngle(ncore, nclad), curve: slider('slide-f-curve'), inj: slider('slide-f-inject'), wl };
+      }
+      function prismParamsFromUI() {
+        const wl = slider('slide-p-wave');
+        const ng = dispersiveIndex('p-glass', wl, 'slide-p-nglass');
+        return { ng, apex: slider('slide-p-apex'), inc: slider('slide-p-inc'), rot: slider('slide-p-rot'), beams: parseInt($('slide-p-beams').value), wl, tc: MathX.criticalAngle(ng, 1.0) };
+      }
+      function mirageParamsFromUI() {
+        return { grad: slider('slide-m-grad'), theta: slider('slide-m-theta'), height: slider('slide-m-height'), wl: slider('slide-m-wave'),
+          nTop: 1 + (state.mirageType === 'inferior' ? slider('slide-m-grad') : 0),
+          nGround: 1 + (state.mirageType === 'inferior' ? 0 : slider('slide-m-grad')),
+          inferior: state.mirageType === 'inferior' };
+      }
+      function rainbowParamsFromUI() {
+        const n = slider('slide-r-n');
+        const incDeg = slider('slide-r-inc');
+        const inc = MathX.rad(incDeg);
+        return {
+          n, inc,
+          b: Math.sin(inc),                       // impact parameter follows from θᵢ
+          disp: slider('slide-r-disperse'),
+          tc: MathX.criticalAngle(n, 1.0)
+        };
+      }
+      function solverParamsFromUI() {
+        const n1 = parseFloat($('inp-sol-n1').value) || 1;
+        const n2 = parseFloat($('inp-sol-n2').value) || 1;
+        const thetaDeg = MathX.clamp(parseFloat($('inp-sol-theta').value) || 0, 0, 89);
+        const wl = slider('slide-sol-wave');
+        const tc = MathX.criticalAngle(n1, n2);
+        const fr = MathX.fresnel(n1, n2, MathX.rad(thetaDeg));
+        return { n1, n2, thetaDeg, tc, fr, wl };
+      }
+
+      /* ==========================================================
+         INIT
+         ========================================================== */
+      fillMaterialSelects();
+      ['s-n1', 's-n2', 'f-core', 'f-clad', 'p-glass'].forEach(slot => {
+        // ensure stored AB matches default selects
+        const sel = $('sel-' + slot);
+        if (sel) { const m = MATERIALS[sel.value]; state.matAB[slot] = { A: m.A, B: m.B }; }
+      });
+      // sync slider defaults with default materials
+      $('slide-s-n1').value = MATERIALS.glass.A;
+      $('slide-s-n2').value = MATERIALS.air.A;
+      $('slide-f-ncore').value = MATERIALS.silica.A;
+      $('slide-f-nclad').value = 1.4520;
+      $('slide-p-nglass').value = MATERIALS.crown.A;
+      Tween.set('sandboxTheta', slider('slide-s-theta'));
+
+      switchMode('sandbox');
+      requestAnimationFrame(loop);
+
+      /* ==========================================================
+         PUBLIC API (inline handlers call TIR.* )
+         ========================================================== */
+      window.TIR = {
+        switchMode, toggleTheme, onParamChange, onMaterialChange,
+        applyPreset, goToCritical,
+        setPrismType, setMirageType, setBowType, setRainbowBeam,
+        toggleRainbowFan, findRainbowRay, onRainIncidence,
+        setLensType, setLensRays, applyLensCase,
+        applySolverExample
+      };
+    })();
+  </script>
+</body>
+
+</html>

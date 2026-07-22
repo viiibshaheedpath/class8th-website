@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Class 8 Hub · Habit Tracker</title>
+
+<!--
+  ============================================================
+  ABOUT THE BACKGROUND VIDEO  (read this — it answers
+  "the video isn't showing")
+  ------------------------------------------------------------
+  I can generate IMAGES but I cannot create or host an .mp4,
+  and the classroom clip you showed me is YOUR file — so it is
+  not bundled in this page. The page is built to play it the
+  INSTANT it exists, in two ways:
+
+  WAY 1 — put the file in your project (permanent / production):
+     save your exported loop as exactly:
+        /videos/classroom-loop.mp4
+     * static site / double-click html -> make a folder named
+       "videos" NEXT TO this html file and drop the mp4 in it.
+     * Next.js or Vite               -> put it in
+       public/videos/classroom-loop.mp4
+     * Antigravity visual builder     -> upload the mp4 to its
+       media/files area and set the <source src="..."> below to
+       the URL it gives you.
+     VERIFY: open  http://localhost:PORT/videos/classroom-loop.mp4
+     in a tab. If the video plays there, it WILL play as the
+     background. If that tab 404s, the path is wrong -> fix it.
+
+  WAY 2 — preview with ZERO setup (right now):
+     just DRAG your classroom video file and DROP it anywhere on
+     this page (or tap the chip at the top to pick the file).
+     It starts looping & muted immediately, and blurs when you
+     open the dashboard — exactly like production. Nothing is
+     uploaded; it only lives in your browser tab.
+
+  Until a video is playing, an animated poster (the generated
+  classroom art) shows behind everything, so the page never
+  looks empty. The chip at the top tells you which state you're
+  in and auto-hides the moment a real video plays.
+
+  The rest of the page (blur-on-open, animated dashboard, past
+  hours chart, category breakdown, live timer, quick-add, streak
+  buttons) is unchanged and works in both ways.
+  ============================================================
+-->
+
+<!-- Fonts via fontsource CDN (NOT google fonts) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter/400.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter/500.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter/600.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter/700.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter/800.css" />
+
+<style>
+  :root{
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --spring:cubic-bezier(.18,.9,.24,1.12);
+    --c-blue:#3b82f6; --c-orange:#f97316; --c-magenta:#d6249f; --c-gray:#9aa0aa;
+    --flame:#ff7a3c;
+    --glass:rgba(14,14,20,.62);
+    --glass-bd:rgba(255,255,255,.10);
+    --txt:#fff; --muted:#b6b6c2; --faint:#7d7d8a;
+    --field:rgba(255,255,255,.06); --field-bd:rgba(255,255,255,.12);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:#07070b; color:var(--txt); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit}
+  a{color:inherit}
+
+  /* ---------- BACKGROUND LAYER ---------- */
+  .bg{
+    position:fixed; inset:0; z-index:1;
+    transition:filter .55s var(--ease), transform .55s var(--ease);
+    transform:scale(1);
+  }
+  .bg.dimmed{ filter:blur(16px) brightness(.42) saturate(.85); transform:scale(1.06); }
+  .bg-fallback{
+    position:absolute; inset:-4%;
+    background:url("https://image.qwenlm.ai/public_source/7c7f8dd4-5a7e-4883-b636-c6f71051b664/1d2feb35e-fe3b-4dcf-b85c-2ceb26fec787.png") center/cover no-repeat;
+    animation:kenburns 36s ease-in-out infinite alternate;
+    transition:opacity .5s var(--ease);
+  }
+  @keyframes kenburns{ 0%{transform:scale(1.05) translate(0,0)} 100%{transform:scale(1.14) translate(-1.5%,-2%)} }
+  .bg-video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .bg-tint{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 90% at 50% 120%, rgba(5,6,12,.7), transparent 60%),
+      linear-gradient(180deg, rgba(5,6,12,.55) 0%, rgba(5,6,12,.22) 38%, rgba(5,6,12,.32) 70%, rgba(5,6,12,.78) 100%),
+      linear-gradient(90deg, rgba(5,6,12,.5), transparent 55%);
+  }
+
+  /* ---------- DRAG-DROP VEIL ---------- */
+  .dragveil{
+    position:fixed; inset:0; z-index:30; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(7,7,12,.55); backdrop-filter:blur(4px);
+    border:3px dashed rgba(124,92,255,.7); margin:14px; border-radius:24px;
+    pointer-events:none;
+  }
+  body.dragover .dragveil{ display:flex; }
+  .dragveil .dv-inner{
+    text-align:center; color:#fff; font-weight:700; font-size:clamp(18px,3vw,28px);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .dragveil .dv-inner svg{ width:46px; height:46px; color:#a78bfa; }
+  .dragveil .dv-inner small{ font-size:13px; font-weight:500; color:var(--muted); }
+
+  /* ---------- VIDEO STATUS CHIP (top) ---------- */
+  .drop-hint{
+    position:fixed; left:50%; top:70px; transform:translateX(-50%); z-index:8;
+    cursor:pointer; max-width:min(92vw,560px);
+    display:inline-flex; align-items:center; gap:9px;
+    padding:9px 16px; border-radius:999px; font-size:12.5px; font-weight:600; line-height:1.3;
+    color:#e7e1ff; text-align:center;
+    background:rgba(124,92,255,.16); border:1px solid rgba(124,92,255,.42);
+    backdrop-filter:blur(12px); box-shadow:0 10px 30px rgba(0,0,0,.4);
+    transition:opacity .35s var(--ease), transform .35s var(--ease), background .2s;
+  }
+  .drop-hint:hover{ background:rgba(124,92,255,.26); }
+  .drop-hint svg{ width:16px; height:16px; flex:0 0 auto; }
+  .drop-hint.ok{ color:#bff3da; background:rgba(16,185,129,.16); border-color:rgba(16,185,129,.42); }
+  .drop-hint.gone{ opacity:0; transform:translate(-50%,-14px); pointer-events:none; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:6;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:18px clamp(18px,4vw,46px);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; text-decoration:none; text-shadow:0 2px 12px rgba(0,0,0,.6); }
+  .brand .dot{ width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,#7c5cff,#22d3ee); box-shadow:0 6px 18px rgba(124,92,255,.5); display:grid; place-items:center; font-size:15px; }
+  .topbar .right{ display:flex; align-items:center; gap:10px; }
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600;
+    background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(10px); text-shadow:0 1px 6px rgba(0,0,0,.5);
+  }
+  .pill .live{ width:8px; height:8px; border-radius:50%; background:#34d399; box-shadow:0 0 0 0 rgba(52,211,153,.7); animation:ping 2s ease-out infinite; }
+  @keyframes ping{ 0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)} 100%{box-shadow:0 0 0 10px rgba(52,211,153,0)} }
+  .ghostlink{
+    padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; text-decoration:none;
+    background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(10px);
+    transition:transform .18s var(--ease), background .2s;
+  }
+  .ghostlink:hover{ transform:translateY(-2px); background:rgba(255,255,255,.18); }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:fixed; inset:0; z-index:4;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:18px; padding:90px 22px;
+    transition:opacity .4s var(--ease), transform .4s var(--ease);
+  }
+  .hero.hidden{ opacity:0; transform:scale(.97); pointer-events:none; }
+  .hero .kicker{ font-size:12px; letter-spacing:4px; text-transform:uppercase; color:#cdbcff; font-weight:600; text-shadow:0 2px 10px rgba(0,0,0,.6); }
+  .hero h1{ margin:0; font-size:clamp(38px,7vw,82px); font-weight:800; letter-spacing:-2px; line-height:1; text-shadow:0 8px 34px rgba(0,0,0,.6); }
+  .hero h1 .grad{ background:linear-gradient(100deg,#ffd27a,#ff9ec4 45%,#9ec5ff 80%,#7df0ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p{ margin:0; max-width:46ch; font-size:clamp(14px,1.6vw,18px); line-height:1.6; color:rgba(255,255,255,.86); text-shadow:0 2px 14px rgba(0,0,0,.6); }
+  .hero .teasers{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .hero .teasers .pill b{ font-weight:800; }
+
+  .open-btn{
+    margin-top:6px; position:relative; cursor:pointer; border:0; color:#fff;
+    font-size:clamp(15px,1.8vw,18px); font-weight:700; letter-spacing:.2px;
+    padding:16px 34px; border-radius:999px;
+    background:linear-gradient(135deg,#7c5cff 0%,#4f8bff 50%,#22d3ee 100%);
+    box-shadow:0 16px 40px rgba(79,139,255,.5);
+    display:inline-flex; align-items:center; gap:12px;
+    transition:transform .18s var(--ease), box-shadow .25s;
+    animation:floaty 5s ease-in-out infinite;
+  }
+  .open-btn:hover{ transform:translateY(-3px) scale(1.02); box-shadow:0 22px 52px rgba(79,139,255,.65); }
+  .open-btn:active{ transform:translateY(-1px) scale(.99); }
+  .open-btn svg{ width:20px; height:20px; }
+  .open-btn::after{ content:""; position:absolute; inset:-6px; border-radius:999px; border:1.5px solid rgba(124,92,255,.5); opacity:.6; animation:ring 2.6s ease-out infinite; }
+  @keyframes ring{ 0%{transform:scale(.96);opacity:.6} 100%{transform:scale(1.18);opacity:0} }
+  @keyframes floaty{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .hint{ font-size:12.5px; color:rgba(255,255,255,.6); letter-spacing:.4px; }
+
+  /* ---------- OVERLAY + MODAL ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:20;
+    display:flex; align-items:center; justify-content:center;
+    padding:clamp(14px,3vw,40px);
+    background:rgba(4,4,9,.45);
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .35s var(--ease), visibility 0s linear .35s;
+    overflow-y:auto;
+  }
+  .overlay.open{ opacity:1; visibility:visible; pointer-events:auto; transition:opacity .35s var(--ease), visibility 0s; }
+  .modal{
+    position:relative; width:min(960px,100%);
+    background:linear-gradient(160deg, rgba(20,18,30,.92), rgba(12,10,18,.94));
+    border:1px solid var(--glass-bd); border-radius:26px;
+    box-shadow:0 40px 120px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+    padding:clamp(20px,3vw,32px);
+    transform:translateY(26px) scale(.95); opacity:0;
+    transition:transform .5s var(--spring), opacity .35s var(--ease);
+    overflow:hidden;
+  }
+  .overlay.open .modal{ transform:none; opacity:1; }
+  .modal::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(80% 60% at 85% 0%, rgba(214,36,159,.10), transparent 60%),
+               radial-gradient(70% 60% at 0% 100%, rgba(59,130,246,.10), transparent 60%);
+  }
+  .m-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; position:relative; }
+  .m-head h2{ margin:0; font-size:clamp(20px,2.6vw,26px); font-weight:800; letter-spacing:-.5px; }
+  .m-head .sub{ margin:4px 0 0; color:var(--muted); font-size:13.5px; }
+  .close{
+    width:40px; height:40px; flex:0 0 auto; border-radius:12px; cursor:pointer;
+    background:rgba(255,255,255,.07); border:1px solid var(--glass-bd); color:#fff;
+    display:grid; place-items:center; transition:transform .18s var(--ease), background .2s;
+  }
+  .close:hover{ transform:rotate(90deg); background:rgba(255,255,255,.14); }
+  .close svg{ width:18px; height:18px; }
+
+  .streaks{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:20px 0 4px; position:relative; }
+  .sbtn{
+    text-align:left; cursor:pointer; color:#fff;
+    background:rgba(255,255,255,.05); border:1px solid var(--glass-bd); border-radius:16px;
+    padding:13px 14px; display:flex; flex-direction:column; gap:6px;
+    transition:transform .18s var(--ease), background .2s, border-color .2s;
+  }
+  .sbtn:hover{ transform:translateY(-3px); background:rgba(255,255,255,.09); }
+  .sbtn .top{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); font-weight:600; }
+  .sbtn .top svg{ width:16px; height:16px; }
+  .sbtn .val{ font-size:clamp(18px,2.4vw,24px); font-weight:800; letter-spacing:-.5px; }
+  .sbtn.flame{ border-color:rgba(255,122,60,.4); background:linear-gradient(160deg, rgba(255,122,60,.16), rgba(255,255,255,.04)); }
+  .sbtn.flame .top svg{ color:var(--flame); animation:flick 1.8s ease-in-out infinite; }
+  @keyframes flick{ 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.12) rotate(2deg)} }
+  .sbtn .note{ display:none; font-size:11.5px; color:var(--muted); line-height:1.4; }
+  .sbtn.flame.expanded .note{ display:block; }
+
+  .grid{ display:grid; grid-template-columns:1.7fr 1fr; gap:18px; margin-top:18px; position:relative; }
+  .card{ background:rgba(255,255,255,.04); border:1px solid var(--glass-bd); border-radius:18px; padding:18px; }
+  .total-row{ display:flex; align-items:baseline; gap:12px; }
+  .total{ font-size:clamp(30px,4.4vw,46px); font-weight:800; letter-spacing:-1.5px; font-variant-numeric:tabular-nums; }
+  .total-row .lbl{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--faint); font-weight:600; }
+
+  .chart{ position:relative; height:188px; margin-top:14px; padding-left:6px; }
+  .gridlines{ position:absolute; inset:0 30px 24px 6px; }
+  .gline{ position:absolute; left:0; right:0; border-top:1px dashed rgba(255,255,255,.10); }
+  .gline span{ position:absolute; right:-30px; top:-8px; font-size:11px; color:var(--faint); width:26px; text-align:right; }
+  .bars{ position:absolute; inset:0 30px 24px 6px; display:flex; align-items:flex-end; gap:clamp(4px,1.2vw,12px); }
+  .barwrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; }
+  .bar{ width:100%; max-width:26px; border-radius:7px 7px 3px 3px; background:linear-gradient(180deg,#ffffff,#cfd2dc); height:0; transition:height .7s var(--spring); box-shadow:0 4px 14px rgba(255,255,255,.12); }
+  .bar.dim{ background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08)); box-shadow:none; }
+  .bar.today{ background:linear-gradient(180deg,#a78bfa,#6d2bf0); box-shadow:0 6px 18px rgba(124,92,255,.5); outline:1px solid rgba(167,139,250,.6); }
+  .barwrap .xlabel{ position:absolute; bottom:-22px; font-size:11px; color:var(--faint); white-space:nowrap; }
+  .barwrap.is-today .xlabel{ color:#cdbcff; font-weight:700; }
+
+  .cats h3, .add h3{ margin:0 0 12px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--faint); font-weight:700; }
+  .cat{ display:flex; align-items:center; gap:12px; padding:9px 0; }
+  .cat + .cat{ border-top:1px solid rgba(255,255,255,.06); }
+  .cat .ic{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex:0 0 auto; }
+  .cat .ic svg{ width:18px; height:18px; }
+  .cat .nm{ font-size:14px; font-weight:600; flex:1; }
+  .cat .tm{ font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .add{ margin-top:18px; position:relative; }
+  .add .catpick{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .cpick{ cursor:pointer; border:1px solid var(--glass-bd); background:rgba(255,255,255,.04); color:var(--muted); border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:7px; transition:.18s var(--ease); }
+  .cpick .sw{ width:9px; height:9px; border-radius:50%; }
+  .cpick.active{ color:#fff; background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.3); }
+  .cpick:hover{ transform:translateY(-1px); }
+
+  .add-row{ display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; }
+  .timer-box{ flex:1 1 240px; display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.04); border:1px solid var(--glass-bd); border-radius:16px; padding:14px 16px; }
+  .timer-clock{ font-size:30px; font-weight:800; letter-spacing:-1px; font-variant-numeric:tabular-nums; min-width:96px; }
+  .timer-meta{ font-size:12px; color:var(--muted); }
+  .timer-meta b{ color:#fff; }
+  .tbtns{ margin-left:auto; display:flex; gap:8px; }
+  .tbtn{ cursor:pointer; border:0; border-radius:11px; padding:10px 14px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:7px; transition:transform .16s var(--ease), background .2s; }
+  .tbtn svg{ width:15px; height:15px; }
+  .tbtn:active{ transform:scale(.96); }
+  .tbtn.go{ background:linear-gradient(135deg,#34d399,#10b981); color:#04231a; }
+  .tbtn.go:hover{ transform:translateY(-2px); }
+  .tbtn.stop{ background:rgba(255,255,255,.10); color:#fff; border:1px solid var(--glass-bd); }
+  .tbtn.stop:hover{ background:rgba(255,255,255,.16); }
+
+  .quick-box{ flex:1 1 240px; background:rgba(255,255,255,.04); border:1px solid var(--glass-bd); border-radius:16px; padding:14px 16px; }
+  .quick-box .ql{ font-size:12px; color:var(--muted); margin-bottom:10px; font-weight:600; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ cursor:pointer; border:1px solid var(--glass-bd); background:rgba(255,255,255,.05); color:#fff; border-radius:10px; padding:9px 13px; font-size:13px; font-weight:700; transition:.16s var(--ease); }
+  .chip:hover{ transform:translateY(-2px); background:rgba(124,92,255,.25); border-color:rgba(124,92,255,.5); }
+  .custom{ display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .custom input{ width:62px; padding:9px 10px; border-radius:10px; border:1px solid var(--field-bd); background:var(--field); color:#fff; font-size:14px; outline:none; text-align:center; }
+  .custom input:focus{ border-color:rgba(124,92,255,.6); }
+  .custom span{ font-size:12px; color:var(--muted); }
+  .custom .addbtn{ margin-left:auto; cursor:pointer; border:0; border-radius:10px; padding:9px 16px; font-weight:700; font-size:13px; background:#fff; color:#0a0a0b; transition:transform .16s var(--ease); }
+  .custom .addbtn:hover{ transform:translateY(-2px); }
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translate(-50%,30px); z-index:40;
+    background:rgba(20,18,30,.95); border:1px solid var(--glass-bd); color:#fff;
+    padding:12px 18px; border-radius:14px; font-size:13.5px; font-weight:600;
+    box-shadow:0 16px 40px rgba(0,0,0,.5); backdrop-filter:blur(12px);
+    display:flex; align-items:center; gap:10px;
+    opacity:0; pointer-events:none; transition:opacity .3s var(--ease), transform .3s var(--spring);
+  }
+  .toast.show{ opacity:1; transform:translate(-50%,0); }
+  .toast .tk{ width:9px; height:9px; border-radius:50%; background:#34d399; }
+
+  @media (max-width:760px){
+    .grid{ grid-template-columns:1fr; }
+    .streaks{ grid-template-columns:repeat(2,1fr); }
+    .topbar .pill.hide-sm{ display:none; }
+  }
+  @media (max-width:420px){
+    .timer-box{ flex-direction:column; align-items:flex-start; }
+    .tbtns{ margin-left:0; width:100%; }
+    .tbtns .tbtn{ flex:1; justify-content:center; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .bg,.bg-fallback,.modal,.open-btn,.hero,.toast,.bar,.sbtn.flame .top svg,.open-btn::after,.pill .live{ animation:none !important; transition:none !important; }
+    .bg.dimmed{ filter:blur(12px) brightness(.45); }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ BACKGROUND ============ -->
+  <div class="bg" id="bg">
+    <div class="bg-fallback" id="bgFallback" aria-hidden="true"></div>
+    <video class="bg-video" id="bgVideo" autoplay muted loop playsinline preload="auto"
+           poster="https://image.qwenlm.ai/public_source/7c7f8dd4-5a7e-4883-b636-c6f71051b664/1d2feb35e-fe3b-4dcf-b85c-2ceb26fec787.png">
+      <source src="/1.mp4" type="video/mp4" />
+      <source src="/videos/classroom-loop.mp4" type="video/mp4" />
+    </video>
+    <div class="bg-tint" aria-hidden="true"></div>
+  </div>
+
+  <!-- drag-drop veil -->
+  <div class="dragveil" aria-hidden="true">
+    <div class="dv-inner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Drop your classroom video to preview
+      <small>It will loop muted in the background — nothing is uploaded</small>
+    </div>
+  </div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <a href="/" class="brand"><span class="dot">✦</span> Class&nbsp;8&nbsp;Hub</a>
+    <div class="right">
+      <span class="pill hide-sm"><span class="live"></span> Habit Tracker</span>
+      <a href="/dashboard" class="ghostlink">← Dashboard</a>
+    </div>
+  </header>
+
+  <!-- video status chip (also the file picker on tap) -->
+  <button class="drop-hint" id="dropHint" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M19 10V5h-5"/><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>
+    <span id="dropHintText">No video yet — drag &amp; drop your classroom clip here, or tap to pick a file (or save it to /videos/classroom-loop.mp4).</span>
+  </button>
+  <input type="file" id="videoFile" accept="video/*" hidden />
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="hero">
+    <span class="kicker">PRIYESH Sir · Class 8</span>
+    <h1>Track your <span class="grad">study habits</span></h1>
+    <p>Consistency beats intensity. Log your hours, watch your streak grow, and see exactly where your study time goes — one calm day at a time.</p>
+    <div class="teasers">
+      <span class="pill">🔥 <b id="heroStreak">0</b>&nbsp;day streak</span>
+      <span class="pill">⏱ Today&nbsp;<b id="heroToday">0m</b></span>
+    </div>
+    <button class="open-btn" id="openBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg>
+      Open Study Dashboard
+    </button>
+    <span class="hint">Tap to see your past hours, log today &amp; check your streak</span>
+  </section>
+
+  <!-- ============ DASHBOARD POPUP ============ -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal" id="modal">
+      <div class="m-head">
+        <div>
+          <h2 id="mTitle">Your Study Dashboard</h2>
+          <p class="sub" id="mSub">Keep the streak alive — every minute counts.</p>
+        </div>
+        <button class="close" id="closeBtn" type="button" aria-label="Close dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="streaks">
+        <button class="sbtn flame" id="streakCur" type="button" aria-expanded="false">
+          <span class="top"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-1 4-2 6-1 2 0 4 2 4 1 0 2-1 2-3 2 2 3 4 3 6a5 5 0 0 1-10 0c0-3 2-5 3-7 1-2 2-4 2-6z"/></svg> Current streak</span>
+          <span class="val"><span id="sCur">0</span> days</span>
+          <span class="note">Study at least 1 minute a day to keep it going. Miss a day and it resets!</span>
+        </button>
+        <button class="sbtn" type="button">
+          <span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg> Best streak</span>
+          <span class="val"><span id="sBest">0</span> days</span>
+        </button>
+        <button class="sbtn" type="button">
+          <span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M9 14l2 2 4-4"/></svg> This week</span>
+          <span class="val"><span id="sWeek">0</span>/7</span>
+        </button>
+        <button class="sbtn" type="button">
+          <span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="#7df0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Total logged</span>
+          <span class="val" id="sTotal">0h</span>
+        </button>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="total-row">
+            <span class="total" id="weekTotal">0h 0m</span>
+            <span class="lbl">last 7 days</span>
+          </div>
+          <div class="chart">
+            <div class="gridlines" id="gridlines"></div>
+            <div class="bars" id="bars"></div>
+          </div>
+        </div>
+        <div class="card cats">
+          <h3>Where your time went</h3>
+          <div id="catList"></div>
+        </div>
+      </div>
+
+      <div class="card add">
+        <h3>Log today's study</h3>
+        <div class="catpick" id="catPick"></div>
+        <div class="add-row">
+          <div class="timer-box">
+            <div>
+              <div class="timer-clock" id="timerClock">00:00</div>
+              <div class="timer-meta">Session · <b id="timerCat">Subjects</b></div>
+            </div>
+            <div class="tbtns">
+              <button class="tbtn go" id="timerGo" type="button">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span id="timerGoLabel">Start</span>
+              </button>
+              <button class="tbtn stop" id="timerStop" type="button">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                Stop
+              </button>
+            </div>
+          </div>
+          <div class="quick-box">
+            <div class="ql">Quick add</div>
+            <div class="chips">
+              <button class="chip" type="button" data-min="15">+15m</button>
+              <button class="chip" type="button" data-min="30">+30m</button>
+              <button class="chip" type="button" data-min="60">+1h</button>
+              <button class="chip" type="button" data-min="120">+2h</button>
+            </div>
+            <div class="custom">
+              <input id="custH" type="number" min="0" max="23" inputmode="numeric" placeholder="0" aria-label="hours" />
+              <span>h</span>
+              <input id="custM" type="number" min="0" max="59" inputmode="numeric" placeholder="0" aria-label="minutes" />
+              <span>m</span>
+              <button class="addbtn" id="custAdd" type="button">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span class="tk"></span><span id="toastText"></span></div>
+
+<script>
+(function () {
+  'use strict';
+  var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* =========================================================
+     CATEGORY DEFINITIONS
+     ========================================================= */
+  var CATS = [
+    { key:'subjects', label:'Subjects',     color:'#3b82f6', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg>' },
+    { key:'reading',  label:'Reading',      color:'#f97316', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>' },
+    { key:'sims',     label:'Simulations',  color:'#d6249f', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7 15h10"/></svg>' },
+    { key:'quizzes',  label:'Quizzes',      color:'#9aa0aa', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>' }
+  ];
+  function catByKey(k){ for (var i=0;i<CATS.length;i++){ if (CATS[i].key===k) return CATS[i]; } return CATS[0]; }
+
+  /* =========================================================
+     STATE  (localStorage stand-in for Supabase)
+     ========================================================= */
+  var KEY = 'c8-habit';
+  var SEED_DAYS = [0,45,60,30,0,90,75,120,60,45, 90,110,0,80,95,120,100,85,70,0, 40,55,0,0,65,80,95,110,70,50];
+  var SEED_CATS = { subjects:250, reading:95, sims:70, quizzes:55 };
+  function loadState() {
+    try { var raw = localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); if (p && p.days && p.cats) return p; } } catch (e) {}
+    return { days: SEED_DAYS.slice(), cats: Object.assign({}, SEED_CATS), active: 'subjects' };
+  }
+  function saveState() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    /* SUPABASE DROP-IN: persist server-side after a successful add, e.g.
+       await supabase.from('habit_logs').upsert({
+         user_id: USER_ID, log_date: todayISO(),
+         total_minutes: state.days[29], completed_items: state.cats
+       }, { onConflict:'user_id,log_date' });
+    */
+  }
+  var state = loadState();
+  var TODAY = 29;
+
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+  function fmt(min){ min=Math.max(0,Math.round(min)); var h=Math.floor(min/60), m=min%60; if(h===0) return m+'m'; return h+'h '+(m<10?'0'+m:m)+'m'; }
+  function fmtH(min){ min=Math.max(0,Math.round(min)); var h=Math.floor(min/60), m=min%60; return m===0?h+'h':h+'h '+m+'m'; }
+  function last7(){ return state.days.slice(TODAY-6, TODAY+1); }
+  function weekMinutes(){ return last7().reduce(function(a,b){return a+b;},0); }
+  function weekActiveDays(){ return last7().filter(function(v){return v>0;}).length; }
+  function totalMinutes(){ return state.days.reduce(function(a,b){return a+b;},0); }
+  function streaks(){
+    var d=state.days, cur=0, best=0, run=0;
+    for (var i=0;i<d.length;i++){ if(d[i]>0){run++; if(run>best)best=run;} else run=0; }
+    for (var j=d.length-1;j>=0;j--){ if(d[j]>0) cur++; else break; }
+    return { cur:cur, best:best };
+  }
+  function weekdayLabels(){
+    var names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], out=[], now=new Date();
+    for (var i=6;i>=0;i--){ var dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i); out.push(i===0?'Today':names[dt.getDay()]); }
+    return out;
+  }
+  function hexA(hex,a){ var n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+
+  /* =========================================================
+     BUILD STATIC DOM
+     ========================================================= */
+  var barsEl=$('bars'), gridEl=$('gridlines'), catListEl=$('catList'), catPickEl=$('catPick');
+  var barNodes=[], labelNodes=[];
+  (function buildBars(){
+    for (var i=0;i<7;i++){
+      var wrap=document.createElement('div'); wrap.className='barwrap';
+      var bar=document.createElement('div'); bar.className='bar';
+      var lab=document.createElement('span'); lab.className='xlabel';
+      wrap.appendChild(bar); wrap.appendChild(lab); barsEl.appendChild(wrap);
+      barNodes.push({wrap:wrap,bar:bar}); labelNodes.push(lab);
+    }
+  })();
+  (function buildCats(){
+    CATS.forEach(function(c){
+      var row=document.createElement('div'); row.className='cat'; row.dataset.key=c.key;
+      row.innerHTML='<span class="ic" style="background:'+hexA(c.color,.16)+';color:'+c.color+'">'+c.svg+'</span><span class="nm">'+c.label+'</span><span class="tm" data-tm="'+c.key+'">0m</span>';
+      catListEl.appendChild(row);
+    });
+    CATS.forEach(function(c){
+      var b=document.createElement('button'); b.type='button'; b.className='cpick'; b.dataset.key=c.key;
+      b.innerHTML='<span class="sw" style="background:'+c.color+'"></span>'+c.label;
+      b.addEventListener('click', function(){ state.active=c.key; saveState(); renderCatPick(); $('timerCat').textContent=catByKey(state.active).label; });
+      catPickEl.appendChild(b);
+    });
+  })();
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
+  var displayedTotal=0;
+  function renderAll(animateTotal){ renderStreaks(); renderChart(); renderCats(); renderCatPick(); renderHeroTeaser(); setTotal(weekMinutes(), animateTotal); $('timerCat').textContent=catByKey(state.active).label; }
+  function renderStreaks(){ var s=streaks(); $('sCur').textContent=s.cur; $('sBest').textContent=s.best; $('sWeek').textContent=weekActiveDays(); $('sTotal').textContent=fmtH(totalMinutes()); }
+  function renderChart(){
+    var data=last7(), labels=weekdayLabels();
+    var maxDay=Math.max.apply(null,data);
+    var scaleMax=Math.max(120, Math.ceil(maxDay/60)*60);
+    gridEl.innerHTML='';
+    var steps=scaleMax/60;
+    for (var g=0; g<=steps; g++){ var line=document.createElement('div'); line.className='gline'; line.style.bottom=(g/steps*100)+'%'; var sp=document.createElement('span'); sp.textContent=g+'h'; line.appendChild(sp); gridEl.appendChild(line); }
+    for (var i=0;i<7;i++){
+      var v=data[i], pct=Math.min(100,(v/scaleMax)*100), node=barNodes[i];
+      node.bar.style.height=(v<=0?2:Math.max(4,pct))+'%';
+      node.bar.className='bar'+(i===6?' today':(v<scaleMax*0.18?' dim':''));
+      node.wrap.className='barwrap'+(i===6?' is-today':'');
+      labelNodes[i].textContent=labels[i];
+    }
+  }
+  function renderCats(){ CATS.forEach(function(c){ var el=catListEl.querySelector('[data-tm="'+c.key+'"]'); if(el) el.textContent=fmt(state.cats[c.key]||0); }); }
+  function renderCatPick(){ var btns=catPickEl.querySelectorAll('.cpick'); btns.forEach(function(b){ b.classList.toggle('active', b.dataset.key===state.active); }); }
+  function renderHeroTeaser(){ $('heroStreak').textContent=streaks().cur; $('heroToday').textContent=fmt(state.days[TODAY]); }
+  function setTotal(target, animate){
+    if (REDUCE || !animate){ displayedTotal=target; $('weekTotal').textContent=fmt(target); return; }
+    var from=displayedTotal, start=null, dur=600;
+    function step(ts){ if(start===null) start=ts; var t=Math.min(1,(ts-start)/dur); var e=1-Math.pow(1-t,3); $('weekTotal').textContent=fmt(from+(target-from)*e); if(t<1) requestAnimationFrame(step); else displayedTotal=target; }
+    requestAnimationFrame(step);
+  }
+
+  /* =========================================================
+     ADD HOURS
+     ========================================================= */
+  function addMinutes(min, catKey){
+    min=Math.max(0,Math.round(min)); if(min<=0) return;
+    state.days[TODAY]+=min; state.cats[catKey]=(state.cats[catKey]||0)+min;
+    saveState(); renderAll(true); showToast('+'+fmt(min)+' added to '+catByKey(catKey).label);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(c){ c.addEventListener('click', function(){ addMinutes(parseInt(c.dataset.min,10), state.active); }); });
+  $('custAdd').addEventListener('click', function(){
+    var h=parseInt($('custH').value,10)||0, m=parseInt($('custM').value,10)||0, total=h*60+m;
+    if(total<=0){ showToast('Enter hours or minutes first'); return; }
+    addMinutes(total, state.active); $('custH').value=''; $('custM').value='';
+  });
+
+  /* =========================================================
+     STUDY TIMER
+     ========================================================= */
+  var timer={ running:false, startTs:0, accumMs:0, id:null };
+  function elapsedMs(){ return timer.accumMs + (timer.running ? Date.now()-timer.startTs : 0); }
+  function paintClock(){ var s=Math.floor(elapsedMs()/1000); var mm=String(Math.floor(s/60)).padStart(2,'0'); var ss=String(s%60).padStart(2,'0'); $('timerClock').textContent=mm+':'+ss; }
+  function timerStart(){
+    if (timer.running){ timer.accumMs+=Date.now()-timer.startTs; timer.running=false; clearInterval(timer.id); timer.id=null; $('timerGoLabel').textContent='Resume'; return; }
+    timer.running=true; timer.startTs=Date.now(); $('timerGoLabel').textContent='Pause'; timer.id=setInterval(paintClock,250);
+  }
+  function timerStop(){
+    var ms=elapsedMs();
+    if (timer.running){ clearInterval(timer.id); timer.id=null; timer.running=false; }
+    var min=Math.round(ms/60000); timer.accumMs=0; paintClock(); $('timerGoLabel').textContent='Start';
+    if (min<1){ showToast('Nothing to save yet — study a little first!'); return; }
+    addMinutes(min, state.active);
+  }
+  $('timerGo').addEventListener('click', timerStart);
+  $('timerStop').addEventListener('click', timerStop);
+
+  /* =========================================================
+     TOAST
+     ========================================================= */
+  var toastId=null;
+  function showToast(msg){ $('toastText').textContent=msg; var t=$('toast'); t.classList.add('show'); clearTimeout(toastId); toastId=setTimeout(function(){ t.classList.remove('show'); },2600); }
+
+  /* =========================================================
+     MODAL OPEN / CLOSE  (video keeps playing, just blurs)
+     ========================================================= */
+  var overlay=$('overlay'), bg=$('bg'), hero=$('hero'), lastFocus=null;
+  function openDash(){ lastFocus=document.activeElement; bg.classList.add('dimmed'); hero.classList.add('hidden'); overlay.classList.add('open'); renderAll(true); setTimeout(function(){ $('closeBtn').focus(); },60); }
+  function closeDash(){ overlay.classList.remove('open'); bg.classList.remove('dimmed'); hero.classList.remove('hidden'); renderHeroTeaser(); if(lastFocus && lastFocus.focus) lastFocus.focus(); }
+  $('openBtn').addEventListener('click', openDash);
+  $('closeBtn').addEventListener('click', closeDash);
+  overlay.addEventListener('mousedown', function(e){ if(e.target===overlay) closeDash(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && overlay.classList.contains('open')) closeDash(); });
+  $('streakCur').addEventListener('click', function(){ var on=this.classList.toggle('expanded'); this.setAttribute('aria-expanded', on?'true':'false'); });
+
+  /* =========================================================
+     BACKGROUND VIDEO  +  DRAG-DROP / PICK PREVIEW
+     ---------------------------------------------------------
+     * If /videos/classroom-loop.mp4 exists, it plays and the
+       chip auto-hides (the 'playing' handler below).
+     * Otherwise the chip stays and the user can DRAG a video
+       onto the page or TAP the chip to choose a file; the
+       dropped file is loaded into the same <video> via an
+       object URL (preview only, never uploaded).
+     ========================================================= */
+  (function videoSetup() {
+    var v = $('bgVideo');
+    var fallback = $('bgFallback');
+    var chip = $('dropHint');
+    var chipText = $('dropHintText');
+    var fileInput = $('videoFile');
+    if (!v) return;
+
+    var videoPlaying = false;
+    function onPlaying() {
+      videoPlaying = true;
+      if (fallback) fallback.style.opacity = '0';   // hide art, show real video
+      chip.classList.add('gone');                    // hide the "no video" chip
+    }
+    v.addEventListener('playing', onPlaying);
+
+    // if the production source fails, make sure the chip is visible & art shows
+    function markNoSource() {
+      if (!videoPlaying) {
+        chip.classList.remove('gone', 'ok');
+        if (fallback) fallback.style.opacity = '1';
+      }
+    }
+    var src = v.querySelector('source');
+    v.addEventListener('error', markNoSource, true);
+    if (src) src.addEventListener('error', markNoSource);
+
+    // load a chosen/dropped file into the same <video>
+    function setVideoFile(file) {
+      if (!file || file.type.indexOf('video/') !== 0) { showToast('Please drop a video file (.mp4 / .webm / .mov)'); return; }
+      // drop the static <source> so our object URL is the only source
+      while (v.firstChild) v.removeChild(v.firstChild);
+      v.removeAttribute('poster');
+      v.src = URL.createObjectURL(file);
+      v.muted = true; v.loop = true; v.playsInline = true;
+      v.load();
+      var p = v.play(); if (p && p.catch) p.catch(function () {});
+      chip.classList.add('ok'); chipText.textContent = 'Previewing: ' + file.name + '  (save it to /videos/classroom-loop.mp4 to make it permanent)';
+      chip.classList.remove('gone');
+      setTimeout(function () { if (videoPlaying) chip.classList.add('gone'); }, 2600);
+    }
+
+    // tap chip -> file picker
+    chip.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () { if (fileInput.files && fileInput.files[0]) setVideoFile(fileInput.files[0]); });
+
+    // drag & drop anywhere on the page
+    var dragDepth = 0;
+    window.addEventListener('dragenter', function (e) {
+      if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1) {
+        e.preventDefault(); dragDepth++; document.body.classList.add('dragover');
+      }
+    });
+    window.addEventListener('dragover', function (e) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; });
+    window.addEventListener('dragleave', function (e) { dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) document.body.classList.remove('dragover'); });
+    window.addEventListener('drop', function (e) {
+      e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragover');
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) setVideoFile(f);
+    });
+  })();
+
+  /* =========================================================
+     INIT
+     ========================================================= */
+  renderAll(false);
+})();
+</script>
+</body>
+</html>

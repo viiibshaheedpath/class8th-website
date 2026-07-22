@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Class 8 · PRIYESH Sir — Thirteen Values</title>
+
+<!--
+  ============================================================
+  FIX NOTES (values animation)
+  ------------------------------------------------------------
+  The previous blur-scroll was wrong by a factor of 100: the
+  timeline constants were treated as "viewport heights" but the
+  pinned scroll is measured in pixels, so the whole 13-value
+  sequence finished inside ~13% of ONE screen of scrolling ->
+  it looked like it flashed / was "too fast / not written".
+
+  This version measures the timeline in SCREENS (1 screen =
+  100vh = window.innerHeight px). Each value now gets ~0.7 of a
+  full screen of scroll, so you read it comfortably.
+
+  Other fixes:
+   * Words stay HORIZONTAL (no per-word rotation) like the
+     reference video -> they read cleanly ("written properly").
+   * Vertical gap is tied to the actual font size (1.55x) so
+     neighbours never overlap the focused word.
+   * Blur + opacity fall off faster, so ONLY the centred word is
+     crisp and the rest fade -> the focused value pops.
+   * A live counter  "01 / 13  Honesty"  proves the cycle works.
+   * The whole word-stack is gated by an opacity, so no stray
+     blurred words bleed over the intro / outro text.
+   * prefers-reduced-motion -> the 13 values render as a plain,
+     perfectly legible static list (guaranteed visible).
+  ============================================================
+-->
+
+<!-- Fonts via fontsource CDN (NOT google fonts) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins/400.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins/500.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins/600.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins/700.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/poppins/800.css" />
+
+<style>
+  /* ----------  RESET / BASE  ---------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #000;
+    color: #fff;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  /* =========================================================
+     FIXED MINIMAL NAVBAR
+     ========================================================= */
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px clamp(18px, 4vw, 56px);
+    transition: background .3s ease, backdrop-filter .3s ease, border-color .3s ease, padding .3s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .navbar.scrolled {
+    background: rgba(8, 10, 22, .55);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    padding-top: 10px; padding-bottom: 10px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; letter-spacing: .3px; font-size: clamp(15px, 1.5vw, 19px);
+    text-shadow: 0 2px 14px rgba(0,0,0,.6); text-decoration: none;
+  }
+  .brand .dot {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, #7c5cff, #22d3ee);
+    box-shadow: 0 6px 18px rgba(124,92,255,.5);
+    display: grid; place-items: center; font-size: 15px;
+  }
+  .nav-auth { display: flex; align-items: center; gap: 10px; }
+
+  .btn {
+    border: 0; cursor: pointer; font-family: inherit; font-weight: 600;
+    padding: 10px 18px; border-radius: 999px; font-size: 13.5px;
+    transition: transform .18s ease, box-shadow .25s ease, background .25s;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:active { transform: translateY(1px) scale(.98); }
+  .btn-ghost {
+    background: rgba(255,255,255,.10); color: #fff;
+    border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(8px);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.18); transform: translateY(-2px); }
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #7c5cff 0%, #4f8bff 50%, #22d3ee 100%);
+    box-shadow: 0 10px 26px rgba(79,139,255,.45);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(79,139,255,.6); }
+
+  /* =========================================================
+     SECTION 1 — VALUES SCROLL-BLUR INTRO
+     ========================================================= */
+  .values-section {
+    position: relative;
+    background: #000;
+    height: 1200vh;            /* static fallback; JS sets (1+TOTAL)*100 vh */
+    width: 100%;
+  }
+  .values-stage {
+    position: sticky; top: 0;
+    height: 100vh; width: 100%;
+    overflow: hidden;
+    --word-left: 24%;
+    background:
+      radial-gradient(120% 80% at 50% 50%, rgba(124,92,255,.06), transparent 60%),
+      #000;
+  }
+
+  /* intro & outro overlays */
+  .v-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 90px clamp(22px, 7vw, 80px) 80px; gap: 14px;
+    will-change: opacity;
+  }
+  .v-overlay .kicker {
+    font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+    color: #b794ff; font-weight: 600;
+  }
+  .v-overlay h2 {
+    margin: 0; font-size: clamp(26px, 5vw, 58px); line-height: 1.08;
+    font-weight: 800; letter-spacing: -1px; max-width: 18ch;
+  }
+  .v-overlay h2 .accent {
+    background: linear-gradient(100deg, #ffd27a, #ff9ec4 45%, #9ec5ff 80%, #7df0ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .v-overlay p {
+    margin: 0; max-width: 46ch;
+    font-size: clamp(14px, 1.5vw, 18px); line-height: 1.7; color: rgba(255,255,255,.72);
+  }
+  .v-overlay .hint {
+    margin-top: 8px; font-size: 12.5px; letter-spacing: 1px; color: rgba(255,255,255,.5);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .v-overlay .hint .arrow-down { display: inline-block; animation: bob 1.6s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(5px);} }
+
+  /* the blur word stack */
+  .values-column { position: absolute; inset: 0; opacity: 0; }
+  .value-word {
+    position: absolute; top: 50%;
+    left: var(--word-left);
+    margin: 0;
+    font-weight: 800; letter-spacing: -1.5px; line-height: 1; white-space: nowrap;
+    color: #fff;
+    font-size: clamp(28px, 7vw, 84px);
+    transform-origin: left center;
+    transform: translateY(-50%);
+    opacity: 0; filter: blur(0px);
+    will-change: transform, opacity, filter;
+    text-shadow: 0 4px 30px rgba(0,0,0,.5);
+  }
+
+  /* pointer arrow, parked just left of the focused word */
+  .values-arrow {
+    position: absolute; top: 50%;
+    left: var(--word-left);
+    transform: translateY(-50%) translateX(calc(-100% - 16px));
+    font-size: clamp(28px, 5vw, 64px); font-weight: 300; color: #fff;
+    opacity: 0; will-change: opacity; pointer-events: none;
+  }
+
+  /* live counter */
+  .v-counter {
+    position: absolute; top: clamp(78px, 11vh, 116px); left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: baseline; gap: 8px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0; will-change: opacity; pointer-events: none;
+  }
+  .v-counter #vNum { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff; }
+  .v-counter .v-counter-sep { color: rgba(255,255,255,.35); font-weight: 500; }
+  .v-counter .v-counter-total { font-size: 13px; color: rgba(255,255,255,.45); }
+  .v-counter .v-counter-word {
+    margin-left: 8px; font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+    color: #b794ff; font-weight: 600;
+  }
+
+  /* corner tags */
+  .v-tag {
+    position: absolute; bottom: 22px;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #b794ff; opacity: .85;
+  }
+  .v-tag.left  { left: clamp(18px, 4vw, 56px); }
+  .v-tag.right { right: clamp(18px, 4vw, 56px); color: rgba(255,255,255,.45); }
+
+  /* =========================================================
+     SECTION 2 — CLASSROOM HERO (layered animated bg)
+     ========================================================= */
+  .scene {
+    position: relative; width: 100%; min-height: 100svh;
+    overflow: hidden; isolation: isolate; background: #0b1020;
+    --px: 0; --py: 0;
+  }
+  .layer { position: absolute; inset: 0; pointer-events: none; }
+
+  .bg-parallax {
+    z-index: 1;
+    transform: translate3d(calc(var(--px) * -16px), calc(var(--py) * -16px), 0);
+    will-change: transform; transition: transform .25s ease-out;
+  }
+  .bg-image {
+    position: absolute; inset: -6%;
+    /* >>> BACKGROUND_IMAGE_URL : swap for your local file in production <<< */
+    background-image: url("https://image.qwenlm.ai/public_source/7c7f8dd4-5a7e-4883-b636-c6f71051b664/116e317b5-2f33-45f4-acbe-d5f8840dc242.png");
+    background-size: cover; background-position: center 35%; background-repeat: no-repeat;
+    animation: kenburns 32s ease-in-out infinite alternate; will-change: transform;
+  }
+  @keyframes kenburns {
+    0%   { transform: scale(1.06) translate3d(0,0,0); }
+    50%  { transform: scale(1.13) translate3d(-1.5%,-1%,0); }
+    100% { transform: scale(1.18) translate3d(1.5%,-2.5%,0); }
+  }
+
+  .bg-tint {
+    z-index: 2;
+    background:
+      radial-gradient(120% 90% at 50% 120%, rgba(8,12,28,.55), transparent 60%),
+      radial-gradient(140% 120% at 50% 50%, transparent 45%, rgba(6,9,22,.55) 100%),
+      linear-gradient(180deg, rgba(8,12,28,.66) 0%, rgba(8,12,28,.20) 32%, rgba(8,12,28,.12) 55%, rgba(8,12,28,.62) 100%),
+      linear-gradient(90deg, rgba(8,12,28,.5) 0%, transparent 45%);
+  }
+
+  .rays-parallax {
+    z-index: 3;
+    transform: translate3d(calc(var(--px) * 10px), calc(var(--py) * 10px), 0);
+    will-change: transform; transition: transform .25s ease-out;
+  }
+  .rays {
+    position: absolute; top: -25%; right: -10%; width: 80%; height: 150%;
+    background: repeating-linear-gradient(105deg,
+      rgba(255,236,179,0) 0px, rgba(255,236,179,0) 26px,
+      rgba(255,236,179,.16) 40px, rgba(255,236,179,0) 70px);
+    filter: blur(6px); mix-blend-mode: screen; transform-origin: top right;
+    opacity: .55; animation: raypulse 9s ease-in-out infinite alternate;
+    -webkit-mask-image: radial-gradient(70% 70% at 80% 20%, #000 0%, transparent 75%);
+            mask-image: radial-gradient(70% 70% at 80% 20%, #000 0%, transparent 75%);
+  }
+  @keyframes raypulse {
+    0%   { opacity: .35; transform: rotate(-2deg) scaleY(1); }
+    100% { opacity: .75; transform: rotate(2deg)  scaleY(1.06); }
+  }
+
+  .particles-parallax {
+    z-index: 4;
+    transform: translate3d(calc(var(--px) * 26px), calc(var(--py) * 26px), 0);
+    will-change: transform; transition: transform .25s ease-out;
+  }
+  .particles { position: absolute; inset: 0; overflow: hidden; }
+  .mote {
+    position: absolute; top: 100%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff7e0, rgba(255,240,200,.25) 60%, transparent 70%);
+    box-shadow: 0 0 6px rgba(255,240,200,.6);
+    animation-name: floatUp; animation-timing-function: linear;
+    animation-iteration-count: infinite; will-change: transform, opacity;
+  }
+  @keyframes floatUp {
+    0%   { transform: translate3d(0,0,0) scale(.8); opacity: 0; }
+    12%  { opacity: var(--o,.8); }
+    85%  { opacity: var(--o,.8); }
+    100% { transform: translate3d(var(--dx,20px), -120vh, 0) scale(1.1); opacity: 0; }
+  }
+
+  .fg-parallax {
+    z-index: 5;
+    transform: translate3d(calc(var(--px) * -7px), calc(var(--py) * -7px), 0);
+    will-change: transform; transition: transform .25s ease-out; pointer-events: none;
+  }
+  .hero {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    gap: clamp(14px, 2vw, 22px);
+    padding: clamp(110px, 16vh, 170px) clamp(20px, 6vw, 90px) clamp(70px, 12vh, 120px);
+    max-width: 1200px; margin: 0 auto; width: 100%;
+  }
+  .badge {
+    pointer-events: auto;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px; border-radius: 999px;
+    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(8px);
+    font-size: 12.5px; font-weight: 500; letter-spacing: .4px;
+    animation: floaty 5s ease-in-out infinite, rise .8s ease both;
+  }
+  .badge .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: #34d399;
+    box-shadow: 0 0 0 0 rgba(52,211,153,.7); animation: ping 2s ease-out infinite;
+  }
+  @keyframes ping { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.6);} 100%{box-shadow:0 0 0 12px rgba(52,211,153,0);} }
+  @keyframes floaty { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+
+  .hero h1 {
+    margin: 0; font-size: clamp(34px, 6.4vw, 76px); line-height: 1.02;
+    font-weight: 800; letter-spacing: -1.5px;
+    text-shadow: 0 6px 30px rgba(0,0,0,.55); max-width: 16ch;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(100deg, #ffd27a, #ff9ec4 40%, #9ec5ff 75%, #7df0ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero h1 .word { display: inline-block; opacity: 0; transform: translateY(22px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .hero h1 .word:nth-child(1){ animation-delay:.10s }
+  .hero h1 .word:nth-child(2){ animation-delay:.20s }
+  .hero h1 .word:nth-child(3){ animation-delay:.30s }
+  .hero h1 .word:nth-child(4){ animation-delay:.40s }
+  .hero h1 .word:nth-child(5){ animation-delay:.50s }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  .hero p {
+    margin: 0; font-size: clamp(15px, 1.5vw, 19px); line-height: 1.6;
+    color: rgba(255,255,255,.9); max-width: 56ch;
+    text-shadow: 0 2px 16px rgba(0,0,0,.5);
+    opacity: 0; animation: rise .8s ease .6s forwards;
+  }
+  .hero .cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; opacity: 0; animation: rise .8s ease .75s forwards; }
+  .hero .cta .btn { padding: 13px 26px; font-size: 15px; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; opacity: 0; animation: rise .8s ease .9s forwards; }
+  .chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 14px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+    backdrop-filter: blur(10px); font-size: 13px; font-weight: 500;
+  }
+  .chip .ic { font-size: 16px; }
+
+  .scroll-cue {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: rgba(255,255,255,.75); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    pointer-events: none;
+  }
+  .mouse { width: 22px; height: 36px; border: 2px solid rgba(255,255,255,.6); border-radius: 14px; position: relative; }
+  .mouse::after {
+    content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 7px;
+    background: #fff; border-radius: 3px; transform: translateX(-50%);
+    animation: wheel 1.6s ease-in-out infinite;
+  }
+  @keyframes wheel { 0%{opacity:0;transform:translate(-50%,0)} 30%{opacity:1} 100%{opacity:0;transform:translate(-50%,12px)} }
+
+  /* =========================================================
+     FOOTER — all section links
+     ========================================================= */
+  .site-footer {
+    position: relative;
+    background: linear-gradient(180deg, #070a16 0%, #05060f 100%);
+    border-top: 1px solid rgba(255,255,255,.07);
+    padding: clamp(48px, 7vw, 84px) clamp(20px, 5vw, 64px) 28px;
+    color: rgba(255,255,255,.78);
+  }
+  .footer-top {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.6fr repeat(4, 1fr);
+    gap: clamp(28px, 4vw, 56px);
+  }
+  .footer-brand .brand { font-size: 20px; margin-bottom: 14px; }
+  .footer-brand p { margin: 0 0 18px; max-width: 34ch; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,.6); }
+  .footer-values { display: flex; flex-wrap: wrap; gap: 8px; max-width: 40ch; }
+  .footer-values span {
+    font-size: 11.5px; padding: 5px 11px; border-radius: 999px;
+    background: rgba(124,92,255,.12); border: 1px solid rgba(124,92,255,.28); color: #cdbcff;
+  }
+  .footer-col h4 {
+    margin: 0 0 16px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: #fff; font-weight: 700;
+  }
+  .footer-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+  .footer-col a {
+    text-decoration: none; color: rgba(255,255,255,.62); font-size: 14px;
+    position: relative; width: fit-content; transition: color .2s;
+  }
+  .footer-col a::after {
+    content: ""; position: absolute; left: 0; bottom: -3px; height: 2px; width: 0;
+    background: linear-gradient(90deg,#7c5cff,#22d3ee); transition: width .25s ease;
+  }
+  .footer-col a:hover { color: #fff; }
+  .footer-col a:hover::after { width: 100%; }
+  .footer-bottom {
+    max-width: 1200px; margin: clamp(36px, 5vw, 60px) auto 0;
+    padding-top: 22px; border-top: 1px solid rgba(255,255,255,.08);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    font-size: 12.5px; color: rgba(255,255,255,.5);
+  }
+  .footer-bottom .made { color: #b794ff; }
+
+  @media (max-width: 900px) {
+    .footer-top { grid-template-columns: 1fr 1fr; }
+    .footer-brand { grid-column: 1 / -1; }
+  }
+  @media (max-width: 520px) {
+    .footer-top { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .values-stage { --word-left: 13%; }
+  }
+
+  /* =========================================================
+     REDUCED MOTION  ->  show the 13 values as a clean static list
+     ========================================================= */
+  body.reduce .values-section { height: auto !important; }
+  body.reduce .values-stage {
+    position: static; height: auto; min-height: 100vh; overflow: visible;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 36px; padding: 120px 22px 80px;
+  }
+  body.reduce .v-overlay { position: static; inset: auto; opacity: 1 !important; padding: 0; }
+  body.reduce #vOutro { opacity: 1 !important; }
+  body.reduce .values-column {
+    position: static; inset: auto; opacity: 1 !important;
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 4px; width: 100%; max-width: 760px;
+  }
+  body.reduce .value-word {
+    position: static !important; transform: none !important;
+    filter: none !important; opacity: 1 !important;
+    font-size: clamp(22px, 5vw, 48px);
+  }
+  body.reduce .values-arrow,
+  body.reduce .v-counter,
+  body.reduce .v-tag { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-image, .rays, .mote, .badge, .mouse::after, .v-overlay .hint .arrow-down,
+    .hero h1 .word, .hero p, .hero .cta, .stats {
+      animation: none !important; opacity: 1 !important; transform: none !important;
+    }
+    .bg-parallax, .rays-parallax, .particles-parallax, .fg-parallax { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============  FIXED NAVBAR  ============ -->
+  <nav class="navbar" id="navbar" aria-label="Primary">
+    <a href="#top" class="brand"><span class="dot">✦</span> Class&nbsp;8&nbsp;Hub</a>
+    <div class="nav-auth">
+      <a href="/auth" class="btn btn-ghost">Log in</a>
+      <a href="/auth" class="btn btn-primary">Sign up</a>
+    </div>
+  </nav>
+
+  <span id="top"></span>
+
+  <!-- ============  SECTION 1 — VALUES SCROLL-BLUR INTRO  ============ -->
+  <section class="values-section" id="valuesSection" aria-label="Our thirteen values">
+    <div class="values-stage">
+
+      <!-- intro paragraph (fades out on scroll) -->
+      <div class="v-overlay" id="vIntro">
+        <span class="kicker">We the students of PRIYESH Sir</span>
+        <h2>We stand for <span class="accent">thirteen values</span> that shape everything we do.</h2>
+        <p>One classroom. One promise. Thirteen ideas we live by — every lesson, every simulation, every quiz.</p>
+        <span class="hint"><span class="arrow-down">↓</span> Scroll to move through them, one by one</span>
+      </div>
+
+      <!-- the blur word stack (filled + animated by JS) -->
+      <div class="values-column" id="valuesColumn" aria-hidden="true"></div>
+      <div class="values-arrow" id="valuesArrow">→</div>
+
+      <!-- live counter -->
+      <div class="v-counter" id="vCounter" aria-hidden="true">
+        <span id="vNum">01</span>
+        <span class="v-counter-sep">/</span>
+        <span class="v-counter-total">13</span>
+        <span class="v-counter-word" id="vWord">Honesty</span>
+      </div>
+
+      <!-- outro paragraph (fades in at the end) -->
+      <div class="v-overlay" id="vOutro" style="opacity:0">
+        <span class="kicker">Thirteen values · one class</span>
+        <h2>That's who we are.</h2>
+        <p>Built on the basics. Done well.</p>
+        <a href="#classroom" class="btn btn-primary" style="margin-top:14px; pointer-events:auto;">Enter the classroom →</a>
+      </div>
+
+      <span class="v-tag left">Thirteen Values</span>
+      <span class="v-tag right">Class 8 · 2026</span>
+    </div>
+  </section>
+
+  <!-- ============  SECTION 2 — CLASSROOM HERO  ============ -->
+  <section class="scene" id="classroom" aria-label="Animated classroom hero">
+
+    <div class="layer bg-parallax"><div class="bg-image"></div></div>
+    <div class="layer bg-tint"></div>
+    <div class="layer rays-parallax"><div class="rays"></div></div>
+    <div class="layer particles-parallax"><div class="particles" id="particles"></div></div>
+
+    <div class="layer fg-parallax">
+      <div class="hero">
+        <span class="badge"><span class="pulse"></span> Class 8 · Thirteen Values · 2026 cohort</span>
+
+        <h1>
+          <span class="word">Built</span>
+          <span class="word">for</span>
+          <span class="word">Class&nbsp;8,</span>
+          <span class="word">fueled&nbsp;by</span>
+          <span class="word grad">curiosity.</span>
+        </h1>
+
+        <p>
+          Welcome to PRIYESH Sir's learning space. Run interactive simulations, read your
+          books and notes, track your daily study habits, attempt quizzes and explore
+          curated articles — all inside one calm, animated classroom built around the
+          thirteen values we stand for.
+        </p>
+
+        <div class="cta">
+          <a href="/auth" class="btn btn-primary">Start learning →</a>
+          <a href="#valuesSection" class="btn btn-ghost">See our values</a>
+        </div>
+
+        <!-- feature chips: NO counts / numbers shown -->
+        <div class="stats">
+          <div class="chip"><span class="ic">🧪</span> Interactive Simulations</div>
+          <div class="chip"><span class="ic">📚</span> Books &amp; Notes</div>
+          <div class="chip"><span class="ic">🔥</span> Daily Habit Tracker</div>
+          <div class="chip"><span class="ic">✍️</span> Live Quizzes</div>
+          <div class="chip"><span class="ic">📖</span> Curated Reading</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-cue" aria-hidden="true"><div class="mouse"></div> explore</div>
+  </section>
+
+  <!-- ============  FOOTER — ALL SECTION LINKS  ============ -->
+  <footer class="site-footer" aria-label="Site footer">
+    <div class="footer-top">
+
+      <div class="footer-brand">
+        <a href="#top" class="brand"><span class="dot">✦</span> Class&nbsp;8&nbsp;Hub</a>
+        <p>An animated learning home for PRIYESH Sir's Class 8 — simulations, books,
+           habits, quizzes and reading, held together by thirteen values.</p>
+        <div class="footer-values" aria-label="Our thirteen values">
+          <span>Honesty</span><span>Loyalty</span><span>Bravery</span>
+          <span>Self-Discipline</span><span>Fortitude</span><span>Adaptability</span>
+          <span>Commitment</span><span>Excellence</span><span>Unity</span>
+          <span>Faith</span><span>Sacrifice</span><span>Learning</span><span>Curiosity</span>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Learn</h4>
+        <ul>
+          <li><a href="/simulations">Simulations</a></li>
+          <li><a href="/library">Library</a></li>
+          <li><a href="/habits">Habit Tracker</a></li>
+          <li><a href="/quizzes">Quizzes</a></li>
+          <li><a href="/reading">Reading</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li><a href="/auth">Log in</a></li>
+          <li><a href="/auth">Sign up</a></li>
+          <li><a href="/dashboard">Dashboard</a></li>
+          <li><a href="/settings">Profile</a></li>
+          <li><a href="/settings">Settings</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Class</h4>
+        <ul>
+          <li><a href="#valuesSection">Our Values</a></li>
+          <li><a href="#classroom">The Classroom</a></li>
+          <li><a href="/about">About the Class</a></li>
+          <li><a href="/about">PRIYESH Sir</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>More</h4>
+        <ul>
+          <li><a href="/admin">Admin Panel</a></li>
+          <li><a href="/help">Help &amp; FAQ</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+          <li><a href="/guidelines">Guidelines</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 Class 8 Hub · PRIYESH Sir's classroom. All rights reserved.</span>
+      <span class="made">Built on the basics. Done well. ✦</span>
+    </div>
+  </footer>
+
+<script>
+  /* =========================================================
+     0) SHARED
+     ========================================================= */
+  const REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* =========================================================
+     1) VALUES SCROLL-BLUR ENGINE  (timeline measured in SCREENS)
+     ========================================================= */
+  (function valuesScroll() {
+    const section = document.getElementById('valuesSection');
+    const column  = document.getElementById('valuesColumn');
+    const arrow   = document.getElementById('valuesArrow');
+    const intro   = document.getElementById('vIntro');
+    const outro   = document.getElementById('vOutro');
+    const counter = document.getElementById('vCounter');
+    const vNum    = document.getElementById('vNum');
+    const vWord   = document.getElementById('vWord');
+    if (!section || !column) return;
+
+    /* the 13 values, in order */
+    const WORDS = [
+      'Honesty', 'Loyalty', 'Bravery', 'Self-Discipline', 'Fortitude',
+      'Adaptability', 'Commitment', 'Excellence', 'Unity', 'Faith',
+      'Sacrifice', 'Learning', 'Curiosity'
+    ];
+    const LAST = WORDS.length - 1;
+
+    /* build the word elements once */
+    const els = WORDS.map(function (w) {
+      const el = document.createElement('p');
+      el.className = 'value-word';
+      el.textContent = w;
+      column.appendChild(el);
+      return el;
+    });
+
+    /* reduced motion: render a clean static list and stop */
+    if (REDUCE) { document.body.classList.add('reduce'); return; }
+
+    /* ---- timeline in SCREENS (1 screen = 100vh = innerHeight px) ---- */
+    const INTRO_HOLD   = 0.45;
+    const INTRO_FADE   = 0.55;
+    const VALUES_ANCHOR = INTRO_HOLD + INTRO_FADE;          // 1.0  -> vf = 0 here
+    const VALUE_STEP   = 0.70;                              // screens of scroll per value
+    const VALUES_END   = VALUES_ANCHOR + LAST * VALUE_STEP; // vf = LAST here
+    const HOLD_LAST    = 0.45;
+    const OUTRO_FADE   = 0.55;
+    const OUTRO_HOLD   = 0.60;
+    const TOTAL        = VALUES_END + HOLD_LAST + OUTRO_FADE + OUTRO_HOLD;
+
+    /* visual tuning */
+    const X_SKEW  = 22;     // px horizontal drift per unit (the diagonal)
+    const BLUR_PER = 7;     // px blur per unit of distance
+    const BLUR_MAX = 16;
+
+    let gap = 120, fontPx = 80;
+
+    function layout() {
+      section.style.height = (1 + TOTAL) * 100 + 'vh';
+      fontPx = parseFloat(getComputedStyle(els[0]).fontSize) || 80;
+      gap = Math.min(220, Math.max(80, fontPx * 1.55));     // never let words overlap
+    }
+
+    function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+    function update() {
+      const V = window.innerHeight;                          // px in one screen
+      const rect = section.getBoundingClientRect();
+      const max = Math.max(rect.height - V, 0);
+      const pinned = Math.min(Math.max(-rect.top, 0), max);  // px while sticky
+
+      /* focus index (float) */
+      const vf = (pinned - VALUES_ANCHOR * V) / (VALUE_STEP * V);
+
+      /* phase thresholds (px) */
+      const inStart  = INTRO_HOLD * V;
+      const inEnd    = VALUES_ANCHOR * V;
+      const outStart = (VALUES_END + HOLD_LAST) * V;
+      const outEnd   = outStart + OUTRO_FADE * V;
+
+      let valuesOp;
+      if (pinned < inStart)      valuesOp = 0;
+      else if (pinned < inEnd)   valuesOp = (pinned - inStart) / (inEnd - inStart);
+      else if (pinned < outStart) valuesOp = 1;
+      else if (pinned < outEnd)  valuesOp = 1 - (pinned - outStart) / (outEnd - outStart);
+      else                       valuesOp = 0;
+
+      const introOp = pinned <= INTRO_HOLD * V ? 1
+                    : pinned >= inEnd ? 0
+                    : 1 - (pinned - INTRO_HOLD * V) / (inEnd - INTRO_HOLD * V);
+
+      const outroOp = pinned <= outStart ? 0
+                    : pinned >= outEnd ? 1
+                    : (pinned - outStart) / (outEnd - outStart);
+
+      intro.style.opacity   = clamp01(introOp).toFixed(3);
+      outro.style.opacity   = clamp01(outroOp).toFixed(3);
+      column.style.opacity  = clamp01(valuesOp).toFixed(3);   // gate the whole stack
+      arrow.style.opacity   = clamp01(valuesOp).toFixed(3);
+      counter.style.opacity = clamp01(valuesOp).toFixed(3);
+
+      /* per-word transform / blur / fade (words stay horizontal) */
+      for (let i = 0; i < els.length; i++) {
+        const d  = i - vf;
+        const ad = Math.abs(d);
+        const y  = d * gap;
+        const x  = d * X_SKEW;
+        const sc = Math.max(0.8, 1 - Math.min(ad, 2) * 0.07);
+        const blur = Math.min(BLUR_MAX, ad * BLUR_PER);
+        const op = Math.max(0, 1 - ad * 0.5);                // fast falloff -> centre pops
+
+        const el = els[i];
+        el.style.transform = 'translateY(-50%) translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + sc.toFixed(3) + ')';
+        el.style.filter = 'blur(' + blur.toFixed(1) + 'px)';
+        el.style.opacity = op.toFixed(3);
+        el.style.zIndex = String(100 - Math.round(ad));
+      }
+
+      /* live counter */
+      const focused = Math.min(LAST, Math.max(0, Math.round(vf)));
+      vNum.textContent = String(focused + 1).padStart(2, '0');
+      vWord.textContent = WORDS[focused];
+    }
+
+    let ticking = false;
+    function req() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () { update(); ticking = false; });
+    }
+
+    layout();
+    update();
+    window.addEventListener('scroll', req, { passive: true });
+    window.addEventListener('resize', function () { layout(); req(); });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { layout(); update(); });
+    }
+  })();
+
+  /* =========================================================
+     2) FLOATING DUST PARTICLES (hero)
+     ========================================================= */
+  (function buildParticles() {
+    const field = document.getElementById('particles');
+    if (!field) return;
+    const COUNT = window.innerWidth < 640 ? 16 : 30;
+    for (let i = 0; i < COUNT; i++) {
+      const m = document.createElement('span');
+      m.className = 'mote';
+      const size  = (Math.random() * 5 + 2).toFixed(1);
+      const left  = (Math.random() * 100).toFixed(2);
+      const top   = (Math.random() * 100).toFixed(2);
+      const dur   = (Math.random() * 14 + 12).toFixed(1);
+      const delay = -(Math.random() * 26).toFixed(1);
+      const dx    = (Math.random() * 90 - 45).toFixed(0);
+      const op    = (Math.random() * 0.5 + 0.35).toFixed(2);
+      m.style.width  = size + 'px';
+      m.style.height = size + 'px';
+      m.style.left   = left + '%';
+      m.style.top    = top + '%';
+      m.style.setProperty('--dx', dx + 'px');
+      m.style.setProperty('--o', op);
+      m.style.animationDuration = dur + 's';
+      m.style.animationDelay = delay + 's';
+      if (REDUCE) m.style.display = 'none';
+      field.appendChild(m);
+    }
+  })();
+
+  /* =========================================================
+     3) HERO MOUSE PARALLAX + IDLE SWAY
+     ========================================================= */
+  (function parallax() {
+    const scene = document.getElementById('classroom');
+    if (!scene || REDUCE) return;
+    let targetX = 0, targetY = 0, curX = 0, curY = 0, hasPointer = false;
+    scene.addEventListener('pointermove', function (e) {
+      const r = scene.getBoundingClientRect();
+      targetX = (e.clientX - r.left) / r.width  - 0.5;
+      targetY = (e.clientY - r.top)  / r.height - 0.5;
+      hasPointer = true;
+    }, { passive: true });
+    scene.addEventListener('pointerleave', function () { hasPointer = false; });
+    function tick(now) {
+      const t = now / 6000;
+      const gx = hasPointer ? targetX : Math.sin(t) * 0.045;
+      const gy = hasPointer ? targetY : Math.cos(t * 0.8) * 0.035;
+      curX += (gx - curX) * 0.06;
+      curY += (gy - curY) * 0.06;
+      scene.style.setProperty('--px', curX.toFixed(4));
+      scene.style.setProperty('--py', curY.toFixed(4));
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  /* =========================================================
+     4) NAVBAR BACKGROUND ON SCROLL
+     ========================================================= */
+  (function navScroll() {
+    const nav = document.getElementById('navbar');
+    if (!nav) return;
+    function onScroll() {
+      if (window.scrollY > 40) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    }
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+</script>
+</body>
+</html>
