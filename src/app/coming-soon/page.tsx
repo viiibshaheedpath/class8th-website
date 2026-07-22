@@ -17,6 +17,7 @@ export default function ComingSoonPage() {
     const MONO = "ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
     const CHARS = '0123456789ABCDEF';
 
+    // Color Tints: 0 = cool white (dominant), 1 = muted indigo, 2 = muted gold
     const COLORS = [
       { r: 226, g: 226, b: 236, bloom: 0.7 },
       { r: 96, g: 116, b: 214, bloom: 0.5 },
@@ -134,9 +135,8 @@ export default function ComingSoonPage() {
     function resize() {
       if (!canvas) return;
       DPR = Math.min(window.devicePixelRatio || 1, REDUCE ? 1.5 : 2);
-      const parent = canvas.parentElement || document.body;
-      W = parent.clientWidth || window.innerWidth;
-      H = parent.clientHeight || window.innerHeight;
+      W = window.innerWidth;
+      H = window.innerHeight;
       canvas.width = Math.max(1, Math.round(W * DPR));
       canvas.height = Math.max(1, Math.round(H * DPR));
       canvas.style.width = W + 'px';
@@ -256,104 +256,82 @@ export default function ComingSoonPage() {
 
   return (
     <DashboardLayout title="Coming Soon">
+      {/* FIXED FULLSCREEN BACKGROUND CANVAS - EXACTLY LIKE ANIMATION.HTML */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 0,
+          pointerEvents: 'none',
+          display: 'block',
+          background: '#000000'
+        }}
+        aria-hidden="true"
+      />
+
+      {/* OVERLAY CONTAINER ON PURE BLACK */}
       <div
         style={{
           position: 'relative',
-          borderRadius: 'var(--radius-lg)',
-          overflow: 'hidden',
-          minHeight: '85vh',
-          background: '#000000',
+          zIndex: 10,
+          minHeight: '82vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px 24px',
-          color: '#ffffff'
+          padding: '24px'
         }}
       >
-        {/* ========================================================== */}
-        {/* HEX DATA FIELD ANIMATION CANVAS (EXACT ANIMATION FROM HTML)*/}
-        {/* ========================================================== */}
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 0,
-            pointerEvents: 'none',
-            display: 'block'
-          }}
-          aria-hidden="true"
-        />
-
-        {/* VIGNETTE OVERLAY */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(80% 80% at 50% 50%, rgba(0,0,0,0.1), rgba(0,0,0,0.85))',
-            zIndex: 1,
-            pointerEvents: 'none'
-          }}
-        />
-
-        {/* ONLY CONTENT: ANIMATED ITALICS QUOTE OVERLAY */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 10,
-            maxWidth: '820px',
-            textAlign: 'center',
-            padding: '20px'
-          }}
-        >
-          <blockquote className="mystical-quote">
+        <div style={{ maxWidth: '680px', textAlign: 'center' }}>
+          <blockquote className="monochrome-italic-quote">
             “The masons work in silence beyond the veil; soon, the corridors will stretch into uncharted wings, the tapestries will part to reveal hidden instruments, and the very foundations will hum with a swifter, quieter magic.”
           </blockquote>
         </div>
-
-        <style jsx global>{`
-          .mystical-quote {
-            margin: 0;
-            font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
-            font-style: italic;
-            font-size: clamp(20px, 3.2vw, 34px);
-            font-weight: 400;
-            line-height: 1.6;
-            letter-spacing: 0.2px;
-            background: linear-gradient(135deg, #ffffff 10%, #e9d5ff 50%, #c084fc 90%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 35px rgba(168, 85, 247, 0.45);
-            animation: mysticalFadeCycle 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-          }
-
-          @keyframes mysticalFadeCycle {
-            0% {
-              opacity: 0;
-              transform: translateY(14px) scale(0.98);
-              filter: blur(10px);
-            }
-            18% {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-              filter: blur(0px);
-            }
-            78% {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-              filter: blur(0px);
-            }
-            92%, 100% {
-              opacity: 0;
-              transform: translateY(-10px) scale(0.99);
-              filter: blur(8px);
-            }
-          }
-        `}</style>
       </div>
+
+      <style jsx global>{`
+        /* SMALL, ELEGANT BLACK & WHITE ITALIC QUOTE */
+        .monochrome-italic-quote {
+          margin: 0;
+          font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+          font-style: italic;
+          font-size: clamp(13px, 1.4vw, 17px);
+          font-weight: 400;
+          line-height: 1.7;
+          letter-spacing: 0.3px;
+          color: #ffffff;
+          text-align: center;
+          opacity: 0;
+          /* APPEARS ONLY ONCE WHEN OPENED, FADES IN, HOLDS, THEN DISAPPEARS ONCE */
+          animation: singleFadeOnce 8.5s cubic-bezier(0.4, 0, 0.2, 1) 0.4s 1 forwards;
+        }
+
+        @keyframes singleFadeOnce {
+          0% {
+            opacity: 0;
+            transform: translateY(8px);
+            filter: blur(6px);
+          }
+          18% {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0px);
+          }
+          76% {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-8px);
+            filter: blur(8px);
+            visibility: hidden;
+          }
+        }
+      `}</style>
     </DashboardLayout>
   );
 }
