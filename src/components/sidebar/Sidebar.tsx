@@ -20,6 +20,7 @@ export function Sidebar({ isAdmin = false, onCloseMobile }: SidebarProps) {
     { label: 'Habit Tracker', href: '/habits', icon: '🔥' },
     { label: 'Quizzes', href: '/quizzes', icon: '📝' },
     { label: 'Reading', href: '/reading', icon: '📰' },
+    { label: 'Coming Soon', href: '/coming-soon', icon: '🚀' },
     { label: 'Settings', href: '/settings', icon: '⚙️' }
   ];
 
