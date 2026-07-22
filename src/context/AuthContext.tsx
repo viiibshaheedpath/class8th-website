@@ -61,13 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
-    // 3. Default to Student Role (Least Privilege Principle)
-    const defaultStudent = {
-      user: { id: 'student-guest', email: 'student@class8th.edu' } as any,
-      profile: { id: 'student-guest', name: 'Student', role: 'student', email: 'student@class8th.edu' } as UserProfile
-    };
-    setUser(defaultStudent.user);
-    setProfile(defaultStudent.profile);
+    // 3. Unauthenticated State (Clear user & profile)
+    setUser(null);
+    setProfile(null);
     setLoading(false);
 
     // 4. Supabase Auth listener if configured
@@ -236,18 +232,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('class8th_admin_session');
       localStorage.removeItem('class8th_user_session');
+      localStorage.removeItem('class8th_mock_user');
     }
     if (!isMockMode) {
       try {
         await supabase.auth.signOut();
       } catch (e) {}
     }
-    const guestStudent = {
-      user: { id: 'student-guest', email: 'student@class8th.edu' } as any,
-      profile: { id: 'student-guest', name: 'Student', role: 'student', email: 'student@class8th.edu' } as UserProfile
-    };
-    setUser(guestStudent.user);
-    setProfile(guestStudent.profile);
+    setUser(null);
+    setProfile(null);
   };
 
   return (
