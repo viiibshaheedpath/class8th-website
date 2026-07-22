@@ -115,7 +115,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userEmail
         });
       } else {
-        // Default regular profile to Student
         setProfile({
           id: userId,
           name: data?.name || userEmail?.split('@')[0] || 'Student',
@@ -133,13 +132,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Student Sign In
+  // Student Sign In with Strict Supabase Verification
   const signIn = async (email: string, password: string) => {
     setLoading(true);
-    const userEmail = email.trim() || 'student@class8th.edu';
+    const userEmail = email.trim();
 
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('class8th_admin_session');
+    if (!isMockMode) {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password
+      });
+
+      if (authError) {
+        setLoading(false);
+        return { error: authError };
+      }
+
+      if (authData?.user) {
+        let userProfile: UserProfile = {
+          id: authData.user.id,
+          name: authData.user.user_metadata?.name || userEmail.split('@')[0],
+          role: 'student',
+          email: userEmail
+        };
+
+        try {
+          const { data: profData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
+
+          if (profData) {
+            userProfile = {
+              id: profData.id,
+              name: profData.name || userProfile.name,
+              role: profData.role || 'student',
+              email: userEmail
+            };
+          }
+        } catch (err) {}
+
+        const studentObj = {
+          user: authData.user,
+          profile: userProfile
+        };
+
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('class8th_admin_session');
+          localStorage.setItem('class8th_user_session', JSON.stringify(studentObj));
+        }
+
+        setUser(studentObj.user);
+        setProfile(studentObj.profile);
+        setLoading(false);
+        return { error: null };
+      }
+    }
+
+    // Mock Mode fallback validation
+    if (password.length < 6) {
+      setLoading(false);
+      return { error: { message: 'Invalid email or password.' } };
     }
 
     const studentObj = {
@@ -153,19 +207,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('class8th_admin_session');
       localStorage.setItem('class8th_user_session', JSON.stringify(studentObj));
     }
     setUser(studentObj.user);
     setProfile(studentObj.profile);
-
-    if (!isMockMode) {
-      try {
-        await supabase.auth.signInWithPassword({ email: userEmail, password });
-      } catch (err) {
-        console.warn('Supabase signIn notice:', err);
-      }
-    }
-
     setLoading(false);
     return { error: null };
   };
@@ -174,6 +220,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInAdmin = async (email: string, password: string) => {
     setLoading(true);
     const adminEmail = email.trim() || 'admin@class8th.edu';
+
+    if (password !== 'Class8th#Admin2026!') {
+      setLoading(false);
+      return { error: { message: 'Invalid admin credentials.' } };
+    }
 
     if (typeof window !== 'undefined') {
       localStorage.removeItem('class8th_user_session');
@@ -198,24 +249,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isMockMode) {
       try {
         await supabase.auth.signInWithPassword({ email: adminEmail, password });
-      } catch (err) {
-        console.warn('Supabase admin signIn notice:', err);
-      }
+      } catch (err) {}
     }
 
     setLoading(false);
     return { error: null };
   };
 
+  // Student Sign Up with Supabase Auth Registration
   const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);
+    const userEmail = email.trim();
+
+    if (!isMockMode) {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userEmail,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (authError) {
+        setLoading(false);
+        return { error: authError };
+      }
+
+      if (authData?.user) {
+        // Save user profile row in Supabase 'profiles' table
+        try {
+          await supabase.from('profiles').upsert({
+            id: authData.user.id,
+            name,
+            role: 'student',
+            email: userEmail
+          });
+        } catch (err) {
+          console.warn('Profile save notice:', err);
+        }
+
+        const studentObj = {
+          user: authData.user,
+          profile: {
+            id: authData.user.id,
+            name: name || userEmail.split('@')[0],
+            role: 'student',
+            email: userEmail
+          } as UserProfile
+        };
+
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('class8th_admin_session');
+          localStorage.setItem('class8th_user_session', JSON.stringify(studentObj));
+        }
+        setUser(studentObj.user);
+        setProfile(studentObj.profile);
+        setLoading(false);
+        return { error: null };
+      }
+    }
+
+    // Fallback Mock Sign Up
     const studentObj = {
-      user: { id: 'student-' + Date.now(), email } as User,
+      user: { id: 'student-' + Date.now(), email: userEmail } as User,
       profile: {
         id: 'student-' + Date.now(),
         name,
         role: 'student',
-        email
+        email: userEmail
       } as UserProfile
     };
     if (typeof window !== 'undefined') {
