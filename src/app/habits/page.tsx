@@ -26,11 +26,11 @@ const PROG_DATA: Record<string, { labels: string[]; vals: number[] }> = {
 };
 
 const INITIAL_SKILLS = [
-  { name: 'Mathematics', icon: 'calc', pct: 72, slot: 0 },
-  { name: 'Science', icon: 'flask', pct: 64, slot: 1 },
-  { name: 'Reading', icon: 'book', pct: 88, slot: 3 },
-  { name: 'Writing', icon: 'pen', pct: 55, slot: 4 },
-  { name: 'Focus', icon: 'target', pct: 40, slot: 8 }
+  { name: 'Mathematics', icon: 'calc', defaultHours: 360, slot: 0 },
+  { name: 'Science', icon: 'flask', defaultHours: 320, slot: 1 },
+  { name: 'Reading', icon: 'book', defaultHours: 440, slot: 3 },
+  { name: 'Writing', icon: 'pen', defaultHours: 275, slot: 4 },
+  { name: 'Focus', icon: 'target', defaultHours: 200, slot: 8 }
 ];
 
 const ACHIEVEMENTS = [
@@ -79,15 +79,31 @@ export default function HabitsPage() {
   const [points, setPoints] = useState(240);
   const [goal, setGoal] = useState(50);
   const [targetHours, setTargetHours] = useState(3);
-  const [skills, setSkills] = useState<number[]>([72, 64, 88, 55, 40]);
+
+  // Hours per subject state: 5 hours dedicated = 1% skill increase!
+  const [subjectHours, setSubjectHours] = useState<Record<string, number>>({
+    Mathematics: 360,
+    Science: 320,
+    Reading: 440,
+    Writing: 275,
+    Focus: 200
+  });
+
   const [ownedMarket, setOwnedMarket] = useState<boolean[]>([false, false, false, false]);
-  const [usedBoosts, setUsedBoosts] = useState<Record<string, boolean>>({});
-  
+
+  // Non-binary Continuous Liquid Fill levels for Study Boost Vials (0% - 100%)
+  const [boostFills, setBoostFills] = useState<Record<string, number>>({
+    focus: 90,
+    energy: 75,
+    calm: 60,
+    memory: 85
+  });
+
   const [habitSeg, setHabitSeg] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [progSeg, setProgSeg] = useState<'Week' | 'Month'>('Week');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Reflection Logs & Modal State
+
+  // Reflection Logs State
   const [reflectionLogs, setReflectionLogs] = useState<ReflectionLog[]>([
     {
       id: 'log-1',
@@ -109,14 +125,48 @@ export default function HabitsPage() {
   const [logMinutes, setLogMinutes] = useState(30);
   const [logReflection, setLogReflection] = useState('');
 
+  // Pomodoro Timer State
+  const [pomoMode, setPomoMode] = useState<'focus' | 'shortBreak' | 'longBreak'>('focus');
+  const [pomoTimeLeft, setPomoTimeLeft] = useState(1500); // 25 mins in seconds
+  const [pomoIsRunning, setPomoIsRunning] = useState(false);
+  const [pomoSubject, setPomoSubject] = useState('Mathematics');
+  const [pomoSessionsToday, setPomoSessionsToday] = useState(4);
+  const [pomoStudyMinutesToday, setPomoStudyMinutesToday] = useState(100); // 1h 40m
+
   const [toastMsg, setToastMsg] = useState('');
   const [toastWarn, setToastWarn] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cursorGlowRef = useRef<HTMLDivElement>(null);
 
   const needXp = 80 + (level - 1) * 25;
+
+  // Helper: Skill percentage calculation: 5 hours dedicated = 1% skill
+  const getSkillPct = (hours: number) => Math.min(100, Math.floor(hours / 5));
+
+  // Audio chime player for Pomodoro completion
+  const playChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {
+      // Audio autoplay policy fallback
+    }
+  };
 
   // Load state from Supabase / LocalStorage
   useEffect(() => {
@@ -130,9 +180,26 @@ export default function HabitsPage() {
           if (parsed.level !== undefined) setLevel(parsed.level);
           if (parsed.points !== undefined) setPoints(parsed.points);
           if (parsed.goal !== undefined) setGoal(parsed.goal);
-          if (parsed.skills && Array.isArray(parsed.skills)) setSkills(parsed.skills);
           if (parsed.owned && Array.isArray(parsed.owned)) setOwnedMarket(parsed.owned);
         }
+
+        const savedSubHours = localStorage.getItem('c8-subject-hours');
+        if (savedSubHours) {
+          setSubjectHours(JSON.parse(savedSubHours));
+        }
+
+        const savedBoostFills = localStorage.getItem('c8-boost-fills');
+        if (savedBoostFills) {
+          setBoostFills(JSON.parse(savedBoostFills));
+        }
+
+        const savedPomo = localStorage.getItem('c8-pomodoro-stats');
+        if (savedPomo) {
+          const parsedP = JSON.parse(savedPomo);
+          if (parsedP.sessions !== undefined) setPomoSessionsToday(parsedP.sessions);
+          if (parsedP.minutes !== undefined) setPomoStudyMinutesToday(parsedP.minutes);
+        }
+
         const savedLogs = localStorage.getItem('c8-habit-logs');
         if (savedLogs) {
           setReflectionLogs(JSON.parse(savedLogs));
@@ -156,8 +223,9 @@ export default function HabitsPage() {
             setPoints(progress.points ?? 240);
             setGoal(progress.goal ?? 50);
             setTargetHours(progress.target_hours ?? 3);
-            if (progress.skills) setSkills(progress.skills);
             if (progress.owned_market) setOwnedMarket(progress.owned_market);
+            if (progress.subject_hours) setSubjectHours(progress.subject_hours);
+            if (progress.boost_fills) setBoostFills(progress.boost_fills);
           }
 
           const { data: logs } = await supabase
@@ -190,12 +258,18 @@ export default function HabitsPage() {
     newLvl = level,
     newPts = points,
     newGoal = goal,
-    newSkills = skills,
-    newOwned = ownedMarket
+    newOwned = ownedMarket,
+    newSubHours = subjectHours,
+    newBoostFills = boostFills,
+    newPomoSessions = pomoSessionsToday,
+    newPomoMinutes = pomoStudyMinutesToday
   ) => {
     // LocalStorage Sync
     try {
-      localStorage.setItem('c8-quest', JSON.stringify({ xp: newXp, level: newLvl, points: newPts, goal: newGoal, skills: newSkills, owned: newOwned }));
+      localStorage.setItem('c8-quest', JSON.stringify({ xp: newXp, level: newLvl, points: newPts, goal: newGoal, owned: newOwned }));
+      localStorage.setItem('c8-subject-hours', JSON.stringify(newSubHours));
+      localStorage.setItem('c8-boost-fills', JSON.stringify(newBoostFills));
+      localStorage.setItem('c8-pomodoro-stats', JSON.stringify({ sessions: newPomoSessions, minutes: newPomoMinutes }));
     } catch (e) {
       console.error(e);
     }
@@ -210,14 +284,181 @@ export default function HabitsPage() {
           points: newPts,
           goal: newGoal,
           target_hours: targetHours,
-          skills: newSkills,
           owned_market: newOwned,
+          subject_hours: newSubHours,
+          boost_fills: newBoostFills,
           updated_at: new Date().toISOString()
         });
       } catch (err) {
         console.warn('Supabase upsert habit_progress notice:', err);
       }
     }
+  };
+
+  // Pomodoro Timer Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (pomoIsRunning && pomoTimeLeft > 0) {
+      interval = setInterval(() => {
+        setPomoTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (pomoIsRunning && pomoTimeLeft === 0) {
+      setPomoIsRunning(false);
+      playChime();
+
+      if (pomoMode === 'focus') {
+        const sessionMins = 25;
+        const newSessions = pomoSessionsToday + 1;
+        const newMinutes = pomoStudyMinutesToday + sessionMins;
+        const addedHours = sessionMins / 60; // 0.417 hrs
+
+        const updatedHours = {
+          ...subjectHours,
+          [pomoSubject]: Number(((subjectHours[pomoSubject] || 0) + addedHours).toFixed(2))
+        };
+
+        // Refill vials +15% continuous liquid fill
+        const updatedFills = { ...boostFills };
+        Object.keys(updatedFills).forEach((k) => {
+          updatedFills[k] = Math.min(100, (updatedFills[k] || 0) + 15);
+        });
+
+        const newPts = points + 15;
+        setPomoSessionsToday(newSessions);
+        setPomoStudyMinutesToday(newMinutes);
+        setSubjectHours(updatedHours);
+        setBoostFills(updatedFills);
+        setPoints(newPts);
+        addXp(25);
+
+        saveState(xp + 25, level, newPts, goal, ownedMarket, updatedHours, updatedFills, newSessions, newMinutes);
+        showToast(`🎉 Focus Pomodoro Completed! +1 Session, +25m to ${pomoSubject}! +25 XP · +15% Boost Fill`);
+      } else {
+        showToast(`☕ Break completed! Ready to focus again?`);
+      }
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pomoIsRunning, pomoTimeLeft, pomoMode, pomoSessionsToday, pomoStudyMinutesToday, pomoSubject, subjectHours, boostFills, points, xp, level, goal, ownedMarket]);
+
+  // Pomodoro Mode Switcher
+  const handlePomoModeChange = (mode: 'focus' | 'shortBreak' | 'longBreak') => {
+    setPomoMode(mode);
+    setPomoIsRunning(false);
+    if (mode === 'focus') setPomoTimeLeft(1500); // 25 mins
+    else if (mode === 'shortBreak') setPomoTimeLeft(300); // 5 mins
+    else if (mode === 'longBreak') setPomoTimeLeft(900); // 15 mins
+  };
+
+  // RESET ALL HABIT DATA
+  const handleResetAllData = async () => {
+    const defaultHours = {
+      Mathematics: 0,
+      Science: 0,
+      Reading: 0,
+      Writing: 0,
+      Focus: 0
+    };
+    const defaultFills = {
+      focus: 100,
+      energy: 100,
+      calm: 100,
+      memory: 100
+    };
+
+    setXp(0);
+    setLevel(1);
+    setPoints(0);
+    setGoal(0);
+    setTargetHours(3);
+    setSubjectHours(defaultHours);
+    setBoostFills(defaultFills);
+    setOwnedMarket([false, false, false, false]);
+    setReflectionLogs([]);
+    setPomoSessionsToday(0);
+    setPomoStudyMinutesToday(0);
+    setPomoTimeLeft(1500);
+    setPomoIsRunning(false);
+
+    try {
+      localStorage.removeItem('c8-quest');
+      localStorage.removeItem('c8-habit-logs');
+      localStorage.removeItem('c8-subject-hours');
+      localStorage.removeItem('c8-boost-fills');
+      localStorage.removeItem('c8-pomodoro-stats');
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (user?.id) {
+      try {
+        await supabase.from('habit_progress').upsert({
+          user_id: user.id,
+          level: 1,
+          xp: 0,
+          points: 0,
+          goal: 0,
+          target_hours: 3,
+          owned_market: [false, false, false, false],
+          subject_hours: defaultHours,
+          boost_fills: defaultFills,
+          updated_at: new Date().toISOString()
+        });
+
+        await supabase.from('habit_logs').delete().eq('user_id', user.id);
+      } catch (err) {
+        console.warn('Supabase reset error:', err);
+      }
+    }
+
+    setShowResetConfirm(false);
+    showToast('🔄 All habit data, skill hours, and logs have been reset to 0!');
+  };
+
+  // Add dedicated study hours to a subject
+  const handleLogSubjectHours = (subjName: string, additionalHours: number) => {
+    const curHrs = subjectHours[subjName] || 0;
+    const newHrs = Number((curHrs + additionalHours).toFixed(2));
+    const newSubHours = { ...subjectHours, [subjName]: newHrs };
+    setSubjectHours(newSubHours);
+
+    const oldSkillPct = getSkillPct(curHrs);
+    const newSkillPct = getSkillPct(newHrs);
+
+    addXp(10 * additionalHours);
+    saveState(xp, level, points, goal, ownedMarket, newSubHours, boostFills);
+
+    if (newSkillPct > oldSkillPct) {
+      showToast(`⚡ Skill UP! ${subjName} is now ${newSkillPct}% (+1% per 5 hrs)!`);
+    } else {
+      showToast(`⏱ Logged +${additionalHours}h for ${subjName}. Total: ${newHrs}h (${newSkillPct}%)`);
+    }
+  };
+
+  // Non-binary Study Boost Handler (continuous liquid drain/use)
+  const handleUseBoostVial = (boostId: string, boostName: string) => {
+    const curLevel = boostFills[boostId] ?? 80;
+    if (curLevel < 15) {
+      showToast(`🧪 ${boostName} vial is low (${curLevel}%)! Complete Pomodoro sessions to refill!`, true);
+      return;
+    }
+
+    const newLevel = Math.max(0, curLevel - 20);
+    const updatedFills = { ...boostFills, [boostId]: newLevel };
+    setBoostFills(updatedFills);
+    addXp(5);
+    saveState(xp, level, points, goal, ownedMarket, subjectHours, updatedFills);
+    showToast(`🧪 Activated ${boostName} Boost! Fill level: ${newLevel}%  ·  +5 XP`);
+  };
+
+  // Refill all vials
+  const handleRefillVials = () => {
+    const refilled = { focus: 100, energy: 100, calm: 100, memory: 100 };
+    setBoostFills(refilled);
+    saveState(xp, level, points, goal, ownedMarket, subjectHours, refilled);
+    showToast('✨ Refilled all Study Boost vials to 100% full!');
   };
 
   // Cursor glow effect
@@ -277,7 +518,7 @@ export default function HabitsPage() {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => {
       setToastMsg('');
-    }, 2400);
+    }, 2800);
   };
 
   const addXp = (amount: number) => {
@@ -295,7 +536,7 @@ export default function HabitsPage() {
 
     setXp(newXp);
     setLevel(newLvl);
-    saveState(newXp, newLvl, points, goal, skills, ownedMarket);
+    saveState(newXp, newLvl, points, goal, ownedMarket, subjectHours, boostFills);
 
     if (leveled) {
       setShowLevelUp(true);
@@ -310,16 +551,25 @@ export default function HabitsPage() {
       return;
     }
 
+    const minsLogged = Number(logMinutes);
+    const hoursLogged = Number((minsLogged / 60).toFixed(2));
+
     const newLog: ReflectionLog = {
       id: `log-${Date.now()}`,
       subject: logSubject,
-      minutes: Number(logMinutes),
+      minutes: minsLogged,
       reflection: logReflection.trim(),
       date: 'Just now'
     };
 
     const updatedLogs = [newLog, ...reflectionLogs];
     setReflectionLogs(updatedLogs);
+
+    // Update subject hours & skill
+    const curHrs = subjectHours[logSubject] || 0;
+    const newHrs = Number((curHrs + hoursLogged).toFixed(2));
+    const newSubHours = { ...subjectHours, [logSubject]: newHrs };
+    setSubjectHours(newSubHours);
 
     // Save to LocalStorage
     try {
@@ -333,7 +583,7 @@ export default function HabitsPage() {
       try {
         await supabase.from('habit_logs').insert({
           user_id: user.id,
-          minutes_logged: Number(logMinutes),
+          minutes_logged: minsLogged,
           subject: logSubject,
           activity_type: 'Focus Study',
           reflection_note: logReflection.trim()
@@ -349,42 +599,11 @@ export default function HabitsPage() {
     setGoal(newGoal);
     setPoints(newPts);
     addXp(20);
-    saveState(xp, level, newPts, newGoal, skills, ownedMarket);
+    saveState(xp, level, newPts, newGoal, ownedMarket, newSubHours, boostFills);
 
     setIsLogModalOpen(false);
     setLogReflection('');
-    showToast(`📝 Saved reflection log! +20 XP  ·  +10 pts`);
-  };
-
-  const handleGoalClick = () => {
-    setIsLogModalOpen(true);
-  };
-
-  const handleTrainSkill = (index: number) => {
-    if (skills[index] >= 100) {
-      showToast(`${INITIAL_SKILLS[index].name} is already maxed!`);
-      return;
-    }
-    const newSkills = [...skills];
-    newSkills[index] = Math.min(100, newSkills[index] + 6);
-    setSkills(newSkills);
-    addXp(10);
-    saveState(xp, level, points, goal, newSkills, ownedMarket);
-    showToast(`+6% ${INITIAL_SKILLS[index].name}  ·  +10 XP`);
-  };
-
-  const handleUseBoost = (boostId: string, boostName: string) => {
-    if (usedBoosts[boostId]) {
-      showToast(`${boostName} boost recharging…`, true);
-      return;
-    }
-    setUsedBoosts((prev) => ({ ...prev, [boostId]: true }));
-    addXp(5);
-    showToast(`🧪 ${boostName} boost activated!  +5 XP`);
-
-    setTimeout(() => {
-      setUsedBoosts((prev) => ({ ...prev, [boostId]: false }));
-    }, 9000);
+    showToast(`📝 Saved reflection log! +${hoursLogged}h to ${logSubject}  ·  +20 XP`);
   };
 
   const handleBuyMarket = (itemIdx: number) => {
@@ -399,7 +618,7 @@ export default function HabitsPage() {
     newOwned[itemIdx] = true;
     setPoints(newPts);
     setOwnedMarket(newOwned);
-    saveState(xp, level, newPts, goal, skills, newOwned);
+    saveState(xp, level, newPts, goal, newOwned, subjectHours, boostFills);
     showToast(`🎉 Redeemed: ${item.name}  (−${item.cost} pts)`);
   };
 
@@ -409,13 +628,20 @@ export default function HabitsPage() {
     showToast(`Theme · ${PAL_NAMES[nextPal]}`);
   };
 
-  // Helper calculation for today minutes
+  // Helper calculation for today minutes & Pomodoro hours
   const totalTargetMinutes = targetHours * 60;
-  const todayStudiedMinutes = Math.round((totalTargetMinutes * goal) / 100);
+  const todayStudiedMinutes = Math.round((totalTargetMinutes * goal) / 100) + pomoStudyMinutesToday;
   const formattedTodayStudied =
     todayStudiedMinutes < 60
       ? `${todayStudiedMinutes}m`
       : `${Math.floor(todayStudiedMinutes / 60)}h ${todayStudiedMinutes % 60}m`;
+
+  // Format Pomodoro Time
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const getSlotStyle = (slotIdx: number) => {
     const p = PALETTES[curPal][slotIdx] || PALETTES[curPal][0];
@@ -474,8 +700,13 @@ export default function HabitsPage() {
   const ringCircumference = 2 * Math.PI * 58;
   const ringOffset = ringCircumference * (1 - goal / 100);
 
+  // Pomodoro progress ring calculations
+  const totalPomoDuration = pomoMode === 'focus' ? 1500 : pomoMode === 'shortBreak' ? 300 : 900;
+  const pomoProgressPct = (totalPomoDuration - pomoTimeLeft) / totalPomoDuration;
+  const pomoRingOffset = ringCircumference * (1 - pomoProgressPct);
+
   return (
-    <DashboardLayout title="Daily Habit Tracker">
+    <DashboardLayout title="Daily Habit & Skill Tracker">
       <div
         className="habit-root"
         onDragEnter={handleDragEnter}
@@ -483,7 +714,7 @@ export default function HabitsPage() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* ============ REINSTALLED BACKGROUND VIDEO ============ */}
+        {/* ============ BACKGROUND VIDEO ============ */}
         <div className="bg">
           <video
             ref={videoRef}
@@ -546,7 +777,29 @@ export default function HabitsPage() {
                   gap: '6px'
                 }}
               >
-                <span>📝</span> Log Study & Reflect
+                <span>📝</span> Log Study &amp; Reflect
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '10px',
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                title="Reset all habit, skill & study data"
+              >
+                <span>🔄</span> Reset Data
               </button>
 
               <label className="nav-search">
@@ -619,7 +872,10 @@ export default function HabitsPage() {
                         <path d="M12 7v5l3 2" />
                       </svg>
                     </span>
-                    <div className="meta"><b className="display">38h</b><span>Focus time</span></div>
+                    <div className="meta">
+                      <b className="display">{((Object.values(subjectHours).reduce((a, b) => a + b, 0))).toFixed(0)}h</b>
+                      <span>Focus time</span>
+                    </div>
                   </div>
 
                   <div className="pf-stat">
@@ -672,7 +928,7 @@ export default function HabitsPage() {
 
               <div className="chart-total">
                 <span className="num display">
-                  {HABIT_DATA[habitSeg].vals.reduce((a, b) => a + b, 0)}m
+                  {HABIT_DATA[habitSeg].vals.reduce((a, b) => a + b, 0) + pomoStudyMinutesToday}m
                 </span>
                 <span className="lbl">studied</span>
               </div>
@@ -716,41 +972,228 @@ export default function HabitsPage() {
             </section>
           </div>
 
+          {/* POMODORO TIMER & DAILY STUDY TRACKER (NEW CARD) */}
+          <div className="row" style={{ gridTemplateColumns: '1fr', marginBottom: 14 }}>
+            <section className="card hoverable" style={getSlotStyle(3)}>
+              <div className="card-head">
+                <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🍅</span> Pomodoro Study Timer &amp; Daily Tracker
+                </div>
+                <div className="seg">
+                  {(['focus', 'shortBreak', 'longBreak'] as const).map((m) => (
+                    <button
+                      key={m}
+                      className={`seg-btn ${pomoMode === m ? 'active' : ''}`}
+                      type="button"
+                      onClick={() => handlePomoModeChange(m)}
+                    >
+                      {m === 'focus' ? 'Focus (25m)' : m === 'shortBreak' ? 'Short Break (5m)' : 'Long Break (15m)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', alignItems: 'center' }}>
+                {/* Clock & Ring */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <div className="ring" style={{ width: '150px', height: '150px', position: 'relative' }}>
+                    <svg viewBox="0 0 140 140">
+                      <circle className="track" cx="70" cy="70" r="58" />
+                      <circle
+                        className="ring-fg"
+                        cx="70"
+                        cy="70"
+                        r="58"
+                        style={{
+                          strokeDasharray: ringCircumference,
+                          strokeDashoffset: pomoRingOffset,
+                          stroke: pomoMode === 'focus' ? '#a855f7' : pomoMode === 'shortBreak' ? '#34d399' : '#38bdf8'
+                        }}
+                      />
+                    </svg>
+                    <div className="ring-center">
+                      <span className="pct display" style={{ fontSize: '30px', letterSpacing: '1px' }}>
+                        {formatTime(pomoTimeLeft)}
+                      </span>
+                      <span className="xp" style={{ fontSize: '10px', textTransform: 'uppercase' }}>
+                        {pomoIsRunning ? '⚡ Running' : '⏸ Paused'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setPomoIsRunning(!pomoIsRunning)}
+                      style={{
+                        background: pomoIsRunning ? 'rgba(239, 68, 68, 0.2)' : 'linear-gradient(135deg, #a855f7, #6366f1)',
+                        border: pomoIsRunning ? '1px solid #ef4444' : 'none',
+                        color: '#fff',
+                        borderRadius: '10px',
+                        padding: '8px 20px',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {pomoIsRunning ? '⏸ Pause' : '▶ Start Session'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePomoModeChange(pomoMode)}
+                      style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        borderRadius: '10px',
+                        padding: '8px 14px',
+                        fontWeight: 600,
+                        fontSize: '12.5px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔄 Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Session Settings & Daily Stats */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#b6b2cc', marginBottom: '6px', fontWeight: 600 }}>
+                      Select Subject to Study
+                    </label>
+                    <select
+                      value={pomoSubject}
+                      onChange={(e) => setPomoSubject(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        color: '#fff',
+                        borderRadius: '10px',
+                        padding: '9px 12px',
+                        fontSize: '13px',
+                        outline: 'none'
+                      }}
+                    >
+                      {INITIAL_SKILLS.map((sk) => (
+                        <option key={sk.name} value={sk.name} style={{ background: '#181524' }}>
+                          {sk.name} ({getSkillPct(subjectHours[sk.name] || 0)}% Skill)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Daily Stats Counter */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <span style={{ fontSize: '10.5px', color: '#857fa0', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
+                        Sessions Completed Today
+                      </span>
+                      <div className="display" style={{ fontSize: '24px', fontWeight: 700, color: '#a855f7', marginTop: '4px' }}>
+                        {pomoSessionsToday} <small style={{ fontSize: '12px', color: '#b6b2cc' }}>sessions</small>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <span style={{ fontSize: '10.5px', color: '#857fa0', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
+                        Daily Study Given
+                      </span>
+                      <div className="display" style={{ fontSize: '24px', fontWeight: 700, color: '#34d399', marginTop: '4px' }}>
+                        {(pomoStudyMinutesToday / 60).toFixed(1)} <small style={{ fontSize: '12px', color: '#b6b2cc' }}>hrs</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#857fa0', lineHeight: 1.4 }}>
+                    💡 Completing focus sessions automatically updates your dedicated subject hours and increases your skill level (1% per 5 hrs)!
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+
           {/* ROW 2 */}
           <div className="row r2">
-            {/* Skill Tracker */}
+            {/* Skill Tracker based on Hours Spent */}
             <section className="card hoverable" style={getSlotStyle(2)}>
               <div className="card-head">
                 <div className="card-title">Skill Tracker</div>
+                <span style={{ fontSize: '10.5px', color: 'var(--accent)', fontWeight: 700 }}>
+                  5 hrs = +1% Skill
+                </span>
               </div>
+
+              {/* Explicit Rule Banner */}
+              <div
+                style={{
+                  background: 'rgba(168, 85, 247, 0.1)',
+                  border: '1px solid rgba(168, 85, 247, 0.25)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  color: '#e9d5ff',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>💡</span>
+                <span>
+                  <b>Skill Formula:</b> For every <b>5 hours</b> dedicated to a subject, skill level increases by <b>1%</b>.
+                </span>
+              </div>
+
               <div>
-                {INITIAL_SKILLS.map((sk, idx) => (
-                  <div key={sk.name} className="skill" style={getSlotStyle(sk.slot)}>
-                    <span className="skill-ic">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        {renderIcon(sk.icon)}
-                      </svg>
-                    </span>
-                    <div className="skill-body">
-                      <div className="nm">
-                        {sk.name} <span>{skills[idx]}%</span>
+                {INITIAL_SKILLS.map((sk) => {
+                  const hrs = subjectHours[sk.name] || 0;
+                  const pct = getSkillPct(hrs);
+                  return (
+                    <div key={sk.name} className="skill" style={getSlotStyle(sk.slot)}>
+                      <span className="skill-ic">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          {renderIcon(sk.icon)}
+                        </svg>
+                      </span>
+                      <div className="skill-body">
+                        <div className="nm">
+                          <span>{sk.name} <small style={{ color: '#857fa0', fontWeight: 400, marginLeft: 6 }}>({hrs.toFixed(1)} hrs dedicated)</small></span>
+                          <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{pct}%</span>
+                        </div>
+                        <div className="skill-bar">
+                          <i style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="skill-bar">
-                        <i style={{ width: `${skills[idx]}%` }} />
-                      </div>
+                      <button
+                        className="skill-plus"
+                        type="button"
+                        onClick={() => handleLogSubjectHours(sk.name, 1)}
+                        title={`Add +1h to ${sk.name} (+1% skill per 5h)`}
+                        style={{ fontSize: '11px', fontWeight: 700, width: 'auto', padding: '0 8px' }}
+                      >
+                        +1h
+                      </button>
                     </div>
-                    <button
-                      className="skill-plus"
-                      type="button"
-                      onClick={() => handleTrainSkill(idx)}
-                      title={`Train ${sk.name}`}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 5v14M5 12h14" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -782,8 +1225,8 @@ export default function HabitsPage() {
               <div className="stat-strip">
                 <div className="stat"><span className="num display">12</span><span className="lbl"><b>Streak</b>days</span></div>
                 <div className="stat"><span className="num display">6</span><span className="lbl"><b>Subjects</b>active</span></div>
-                <div className="stat"><span className="num display">14</span><span className="lbl"><b>Hours</b>{progSeg.toLowerCase()}</span></div>
-                <div className="stat"><span className="num display">9</span><span className="lbl"><b>Quests</b>done</span></div>
+                <div className="stat"><span className="num display">{((Object.values(subjectHours).reduce((a, b) => a + b, 0))).toFixed(0)}h</span><span className="lbl"><b>Total</b>Hours</span></div>
+                <div className="stat"><span className="num display">{pomoSessionsToday}</span><span className="lbl"><b>Pomo</b>Sessions</span></div>
                 <div className="stat"><span className="num display">92%</span><span className="lbl"><b>Accuracy</b>%</span></div>
               </div>
 
@@ -838,11 +1281,11 @@ export default function HabitsPage() {
                     <span className="sub">today</span>
                   </div>
                 </div>
-                <button className="goal-btn" type="button" onClick={handleGoalClick}>
+                <button className="goal-btn" type="button" onClick={() => setIsLogModalOpen(true)}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
-                  Log Study & Reflect
+                  Log Study &amp; Reflect
                 </button>
               </div>
             </section>
@@ -910,62 +1353,86 @@ export default function HabitsPage() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px', marginTop: '10px' }}>
-                {reflectionLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
-                        {log.subject}
-                      </span>
-                      <span style={{ fontSize: '10.5px', color: '#857fa0' }}>
-                        ⏱ {log.minutes} mins • {log.date}
-                      </span>
+                {reflectionLogs.length === 0 ? (
+                  <p style={{ fontSize: '12px', color: '#857fa0', margin: 0 }}>No reflections logged yet. Click "+ Add Reflection" to start your study journal.</p>
+                ) : (
+                  reflectionLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                          {log.subject}
+                        </span>
+                        <span style={{ fontSize: '10.5px', color: '#857fa0' }}>
+                          ⏱ {log.minutes} mins • {log.date}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#f6f4fc', lineHeight: 1.5 }}>
+                        "{log.reflection}"
+                      </p>
                     </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#f6f4fc', lineHeight: 1.5 }}>
-                      "{log.reflection}"
-                    </p>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
           </div>
 
           {/* ROW 5 */}
           <div className="row r4">
-            {/* Boosts / Potions */}
+            {/* Study Boost Vials with Continuous (Non-Binary) Liquid Level */}
             <section className="card hoverable" style={getSlotStyle(7)}>
               <div className="card-head">
-                <div className="card-title">Study Boosts</div>
+                <div className="card-title">Study Boosts (Continuous Fill)</div>
+                <button
+                  type="button"
+                  onClick={handleRefillVials}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  ⚡ Refill Vials
+                </button>
               </div>
               <div className="vials">
                 {BOOSTS.map((b) => {
-                  const isUsed = !!usedBoosts[b.id];
+                  const fillLevel = boostFills[b.id] ?? 80;
                   return (
                     <div
                       key={b.id}
-                      className={`vial-col ${isUsed ? 'used' : ''}`}
+                      className="vial-col"
                       style={getSlotStyle(b.slot)}
-                      onClick={() => handleUseBoost(b.id, b.name)}
+                      onClick={() => handleUseBoostVial(b.id, b.name)}
                     >
-                      <div className={`vial ${isUsed ? 'used' : ''}`}>
-                        <div className="liquid" />
+                      <div className="vial" style={{ position: 'relative' }}>
+                        {/* Wavy liquid surface line */}
+                        <div
+                          className="liquid"
+                          style={{
+                            height: `${fillLevel}%`,
+                            transition: 'height 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                            background: 'linear-gradient(180deg, var(--accent2), var(--accent))'
+                          }}
+                        />
                         <div className="ic">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             {renderIcon(b.icon)}
                           </svg>
                         </div>
                       </div>
-                      <span className="nm">{b.name}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span className="nm">{b.name}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: 700 }}>
+                          {fillLevel}%
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -1027,6 +1494,81 @@ export default function HabitsPage() {
             </section>
           </div>
         </main>
+
+        {/* RESET CONFIRMATION MODAL */}
+        {showResetConfirm && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 50,
+              background: 'rgba(5, 5, 12, 0.8)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px'
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '420px',
+                background: '#181524',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{ fontSize: '32px' }}>🔄</div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: 700 }}>
+                Reset All Habit &amp; Skill Data?
+              </h3>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#b6b2cc', lineHeight: 1.5 }}>
+                This will reset your level, XP, subject study hours, reflection logs, and Pomodoro session counts back to 0. This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(false)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '10px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetAllData}
+                  style={{
+                    flex: 1,
+                    background: '#ef4444',
+                    border: 'none',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '10px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Yes, Reset Everything
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* LOG STUDY & REFLECTION MODAL */}
         {isLogModalOpen && (
@@ -1090,9 +1632,9 @@ export default function HabitsPage() {
                 >
                   <option value="Mathematics" style={{ background: '#181524' }}>Mathematics</option>
                   <option value="Science" style={{ background: '#181524' }}>Science</option>
-                  <option value="English" style={{ background: '#181524' }}>English</option>
-                  <option value="Social Studies" style={{ background: '#181524' }}>Social Studies</option>
-                  <option value="Computer Science" style={{ background: '#181524' }}>Computer Science</option>
+                  <option value="Reading" style={{ background: '#181524' }}>Reading</option>
+                  <option value="Writing" style={{ background: '#181524' }}>Writing</option>
+                  <option value="Focus" style={{ background: '#181524' }}>Focus</option>
                 </select>
               </div>
 
@@ -1377,7 +1919,7 @@ export default function HabitsPage() {
           cursor: pointer; padding: 4px 10px; border-radius: 7px;
           font-size: 11px; font-weight: 700; color: #b6b2cc; transition: color .25s;
         }
-        .seg-btn.active { color: #fff; }
+        .seg-btn.active { color: #fff; background: rgba(255,255,255,0.12); }
 
         .pf-top { display: flex; gap: 14px; align-items: center; }
         .avatar {
@@ -1444,8 +1986,8 @@ export default function HabitsPage() {
         .skill-body .nm span { color: var(--accent); font-weight: 700; }
         .skill-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
         .skill-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .8s; }
-        .skill-plus { width: 24px; height: 24px; border-radius: 7px; flex: 0 0 auto; display: grid; place-items: center; cursor: pointer; background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; transition: transform .15s; }
-        .skill-plus:hover { transform: scale(1.12) rotate(90deg); }
+        .skill-plus { border-radius: 7px; flex: 0 0 auto; display: grid; place-items: center; cursor: pointer; background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; transition: transform .15s; }
+        .skill-plus:hover { transform: scale(1.08); background: var(--accent); color: #fff; }
 
         .ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .ring { position: relative; width: 140px; height: 140px; }
@@ -1481,11 +2023,18 @@ export default function HabitsPage() {
         .badge-card .rank { font-size: 14px; font-weight: 700; }
         .badge-card .rank span { display: block; font-size: 10.5px; color: #857fa0; text-transform: uppercase; margin-top: 2px; }
 
+        /* CONTINUOUS NON-BINARY STUDY BOOST GLASS VIALS */
         .vials { display: flex; justify-content: space-between; gap: 8px; }
         .vial-col { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; flex: 1; }
-        .vial { width: 36px; height: 48px; border-radius: 0 0 11px 11px; border: 2px solid rgba(255,255,255,.22); position: relative; overflow: hidden; background: rgba(255,255,255,.03); }
-        .vial .liquid { position: absolute; left: 0; right: 0; bottom: 0; height: 72%; background: linear-gradient(180deg, var(--accent2), var(--accent)); }
-        .vial.used .liquid { height: 10%; }
+        .vial {
+          width: 38px; height: 52px; border-radius: 0 0 12px 12px;
+          border: 2px solid rgba(255,255,255,.25); position: relative; overflow: hidden;
+          background: rgba(255,255,255,.04); box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .vial .liquid {
+          position: absolute; left: 0; right: 0; bottom: 0;
+          border-radius: 0 0 10px 10px;
+        }
         .vial .ic { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; z-index: 2; }
         .vial-col .nm { font-size: 10.5px; color: #b6b2cc; font-weight: 600; }
 
