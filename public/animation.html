@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hex Field</title>
+
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+
+        #field {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="field" aria-hidden="true"></canvas>
+
+    <script>
+        (function () {
+            'use strict';
+
+            var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var canvas = document.getElementById('field');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            var MONO = "ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
+            var CHARS = '0123456789ABCDEF';
+
+            var COLORS = [
+                { r: 226, g: 226, b: 236, bloom: 0.70 },
+                { r: 96, g: 116, b: 214, bloom: 0.50 },
+                { r: 212, g: 168, b: 78, bloom: 0.50 }
+            ];
+
+            var DPR = 1, W = 0, H = 0;
+            var fontSize = 12, cellW = 14, cellH = 20, pad = 8, sw = 0, sh = 0;
+            var cols = 0, rows = 0;
+            var cells = [];
+            var sprites = [];
+
+            var rand = function (a, b) { return a + Math.random() * (b - a); };
+            var clamp01 = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
+
+            function buildSprites() {
+                sprites = [];
+                for (var c = 0; c < COLORS.length; c++) {
+                    var row = [];
+                    var col = COLORS[c];
+                    var css = 'rgb(' + col.r + ',' + col.g + ',' + col.b + ')';
+                    for (var g = 0; g < CHARS.length; g++) {
+                        var cv = document.createElement('canvas');
+                        cv.width = Math.max(1, Math.round(sw * DPR));
+                        cv.height = Math.max(1, Math.round(sh * DPR));
+                        var x = cv.getContext('2d');
+                        x.setTransform(DPR, 0, 0, DPR, 0, 0);
+                        x.font = '600 ' + fontSize + 'px ' + MONO;
+                        x.textAlign = 'center';
+                        x.textBaseline = 'middle';
+                        x.shadowColor = css;
+                        x.shadowBlur = fontSize * col.bloom;
+                        x.fillStyle = css;
+                        x.fillText(CHARS.charAt(g), sw / 2, sh / 2 + 0.5);
+                        row.push(cv);
+                    }
+                    sprites.push(row);
+                }
+            }
+
+            function buildGrid() {
+                cells = [];
+                for (var r = 0; r < rows; r++) {
+                    for (var cI = 0; cI < cols; cI++) {
+                        var cx = (cI + 0.5) / cols;
+                        var cy = (r + 0.5) / rows;
+                        var nx = (cx - 0.5) * 2, ny = (cy - 0.5) * 2;
+                        var r2 = nx * nx * 0.72 + ny * ny;
+                        var vig = clamp01(1.15 - r2 * 0.90);
+
+                        var roll = Math.random();
+                        var color = roll < 0.025 ? 1 : roll < 0.050 ? 2 : 0;
+
+                        var base = 0;
+                        var blink = false;
+                        if (color !== 0) {
+                            base = rand(0.06, 0.20);
+                        } else if (Math.random() < 0.14) {
+                            base = rand(0.04, 0.13);
+                            blink = Math.random() < 0.45;
+                        }
+
+                        var jit = rand(0.55, 1.45);
+                        var fast = Math.random() < 0.3;
+                        cells.push({
+                            cx: cx, cy: cy, vig: vig, color: color, base: base, blink: blink, jit: jit,
+                            fs: rand(blink ? 2.4 : 1.1, blink ? 5.0 : 3.2),
+                            fp: rand(0, 6.283),
+                            glyph: (Math.random() * 16) | 0,
+                            next: rand(0.2, 2.5),
+                            gapFast: fast,
+                            dx: cI * cellW + cellW / 2 - sw / 2,
+                            dy: r * cellH + cellH / 2 - sh / 2
+                        });
+                    }
+                }
+            }
+
+            function resize() {
+                DPR = Math.min(window.devicePixelRatio || 1, REDUCE ? 1.5 : 2);
+                W = window.innerWidth; H = window.innerHeight;
+                canvas.width = Math.max(1, Math.round(W * DPR));
+                canvas.height = Math.max(1, Math.round(H * DPR));
+                canvas.style.width = W + 'px';
+                canvas.style.height = H + 'px';
+                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+                fontSize = Math.max(11, Math.min(16, Math.round(W / 110)));
+                cellW = Math.round(fontSize * 1.15);
+                cellH = Math.round(fontSize * 1.7);
+                pad = Math.round(fontSize * 0.6);
+                sw = cellW + pad * 2;
+                sh = cellH + pad * 2;
+                cols = Math.max(1, Math.ceil(W / cellW));
+                rows = Math.max(1, Math.ceil(H / cellH));
+
+                buildSprites();
+                buildGrid();
+            }
+
+            function gauss(nx, ny, bx, by, rx, ry) {
+                var dx = (nx - bx) / rx, dy = (ny - by) / ry;
+                return Math.exp(-(dx * dx + dy * dy) * 2.2);
+            }
+            function revealAt(nx, ny, t) {
+                var b0x = 0.5 + 0.34 * Math.sin(t * 0.13);
+                var b0y = 0.5 + 0.30 * Math.sin(t * 0.10 + 1.3);
+                var b1x = 0.5 + 0.38 * Math.sin(t * 0.085 + 2.2);
+                var b1y = 0.5 + 0.27 * Math.cos(t * 0.115 + 0.5);
+                var b2x = b0x + 0.07 * Math.sin(t * 0.5 + 0.7);
+                var b2y = b0y + 0.06 * Math.cos(t * 0.62);
+                var r = 1.10 * gauss(nx, ny, b0x, b0y, 0.36, 0.32)
+                    + 0.90 * gauss(nx, ny, b1x, b1y, 0.32, 0.28)
+                    + 1.35 * gauss(nx, ny, b2x, b2y, 0.14, 0.12);
+                if (r > 1) r = 1;
+                return r * (0.92 + 0.08 * Math.sin(t * 0.7));
+            }
+
+            function render(t) {
+                ctx.clearRect(0, 0, W, H);
+                for (var i = 0; i < cells.length; i++) {
+                    var c = cells[i];
+                    var rev = revealAt(c.cx, c.cy, t);
+                    var f = 0.5 + 0.5 * Math.sin(t * c.fs + c.fp);
+                    if (c.blink) f = f * f * f;
+                    var a = (c.base + rev * c.jit) * (0.40 + 0.60 * f) * c.vig;
+                    if (a < 0.015) continue;
+                    if (a > 1) a = 1;
+                    ctx.globalAlpha = a;
+                    ctx.drawImage(sprites[c.color][c.glyph], c.dx, c.dy, sw, sh);
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            function mutate(t) {
+                for (var i = 0; i < cells.length; i++) {
+                    var c = cells[i];
+                    if (t >= c.next) {
+                        c.glyph = (Math.random() * 16) | 0;
+                        c.next = t + (c.gapFast ? rand(0.2, 0.9) : rand(1.0, 4.0));
+                    }
+                }
+            }
+
+            var clock = 0, last = 0, acc = 0;
+            var STEP = 1 / 45;
+            function frame(now) {
+                var dt = last ? (now - last) / 1000 : 0; last = now;
+                if (dt > 0.1) dt = 0.1;
+                acc += dt;
+                if (acc >= STEP) {
+                    mutate(clock + acc);
+                    clock += acc;
+                    render(clock);
+                    acc = 0;
+                }
+                requestAnimationFrame(frame);
+            }
+
+            resize();
+            if (REDUCE) {
+                mutate(10); render(10);
+            } else {
+                requestAnimationFrame(frame);
+            }
+
+            var rT;
+            window.addEventListener('resize', function () {
+                clearTimeout(rT);
+                rT = setTimeout(function () {
+                    resize();
+                    if (REDUCE) { mutate(10); render(10); }
+                }, 140);
+            });
+        })();
+    </script>
+</body>
+
+</html>
